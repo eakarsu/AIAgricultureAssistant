@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "AI Tarim Asistani",
+    "subtitle": "Yapay zeka ile desteklenen akilli tarim"
+  },
+  "nav": {
+    "dashboard": "Kontrol Paneli",
+    "profile": "Profil",
+    "settings": "Ayarlar",
+    "notifications": "Bildirimler",
+    "logout": "Cikis Yap",
+    "search": "Ara..."
+  },
+  "dashboard": {
+    "title": "Kontrol Paneli",
+    "welcome": "AI destekli tarim yonetim sisteminize hos geldiniz",
+    "aiFeatures": "AI Ozellikleri",
+    "farmManagement": "Ciftlik Yonetimi",
+    "communication": "Iletisim",
+    "account": "Hesap ve Sistem"
+  },
+  "features": {
+    "cropDiseases": "AI Bitki Hastalik Dedektoru",
+    "irrigation": "AI Sulama Optimizer",
+    "harvest": "AI Hasat Tahmincisi",
+    "pests": "AI Zararli Tanimlayici",
+    "soil": "AI Toprak Analizcisi",
+    "weather": "Hava Durumu",
+    "fields": "Tarla Haritasi",
+    "uploads": "Dosya Yuklemeleri",
+    "export": "Veri Aktarimi",
+    "notifications": "Bildirimler",
+    "feedback": "Geri Bildirim",
+    "contact": "Iletisim ve Destek",
+    "profile": "Kullanici Profili",
+    "settings": "Ayarlar"
+  },
+  "common": {
+    "save": "Kaydet",
+    "cancel": "Iptal",
+    "delete": "Sil",
+    "edit": "Duzenle",
+    "create": "Olustur",
+    "close": "Kapat",
+    "loading": "Yukleniyor...",
+    "noRecords": "Kayit bulunamadi",
+    "confirm": "Emin misiniz?",
+    "success": "Basarili",
+    "error": "Hata",
+    "back": "Kontrol Paneline Don",
+    "records": "Kayitlar",
+    "export": "Aktar",
+    "search": "Ara"
+  },
+  "auth": {
+    "login": "Giris Yap",
+    "register": "Kayit Ol",
+    "email": "E-posta",
+    "password": "Sifre",
+    "forgotPassword": "Sifremi Unuttum?",
+    "resetPassword": "Sifre Sifirla",
+    "demoLogin": "Demo Bilgileri Doldur"
+  }
+}

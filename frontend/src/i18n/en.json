@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "AI Agriculture Assistant",
+    "subtitle": "Smart farming powered by artificial intelligence"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "logout": "Logout",
+    "search": "Search..."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to your AI-powered agriculture management system",
+    "aiFeatures": "AI Features",
+    "farmManagement": "Farm Management",
+    "communication": "Communication",
+    "account": "Account & System"
+  },
+  "features": {
+    "cropDiseases": "AI Crop Disease Detector",
+    "irrigation": "AI Irrigation Optimizer",
+    "harvest": "AI Harvest Predictor",
+    "pests": "AI Pest Identifier",
+    "soil": "AI Soil Analyzer",
+    "weather": "Weather Data",
+    "fields": "Field Map",
+    "uploads": "File Uploads",
+    "export": "Data Export",
+    "notifications": "Notifications",
+    "feedback": "Feedback",
+    "contact": "Contact & Support",
+    "profile": "User Profile",
+    "settings": "Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "loading": "Loading...",
+    "noRecords": "No records found",
+    "confirm": "Are you sure?",
+    "success": "Success",
+    "error": "Error",
+    "back": "Back to Dashboard",
+    "records": "Records",
+    "export": "Export",
+    "search": "Search"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "demoLogin": "Auto-Fill Demo Credentials"
+  }
+}
