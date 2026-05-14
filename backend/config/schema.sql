@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS irrigation_records CASCADE;
 DROP TABLE IF EXISTS harvest_predictions CASCADE;
 DROP TABLE IF EXISTS pest_identifications CASCADE;
 DROP TABLE IF EXISTS soil_analyses CASCADE;
+DROP TABLE IF EXISTS crop_recommendations CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- Users Table
@@ -264,6 +265,88 @@ CREATE TABLE IF NOT EXISTS field_locations (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- AI Results Log (persists every AI call for auditing, cost tracking, prompt improvement)
+DROP TABLE IF EXISTS ai_results CASCADE;
+CREATE TABLE IF NOT EXISTS ai_results (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    feature VARCHAR(100) NOT NULL,
+    model VARCHAR(100),
+    prompt_preview TEXT,
+    raw_response TEXT,
+    parsed_result JSONB,
+    confidence_score DECIMAL(5,2),
+    tokens_used INTEGER,
+    latency_ms INTEGER,
+    success BOOLEAN DEFAULT true,
+    error_message TEXT,
+    entity_type VARCHAR(100),
+    entity_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Crop Rotation Recommendations
+DROP TABLE IF EXISTS crop_recommendations CASCADE;
+CREATE TABLE IF NOT EXISTS crop_recommendations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    field_id TEXT NOT NULL,
+    recommended_crop TEXT,
+    rotation_reasoning TEXT,
+    soil_depletion_analysis TEXT,
+    disease_pressure_analysis TEXT,
+    alternative_crops JSONB,
+    expected_benefits JSONB,
+    ai_analysis TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Subsidy Searches
+DROP TABLE IF EXISTS subsidy_searches CASCADE;
+CREATE TABLE IF NOT EXISTS subsidy_searches (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    location VARCHAR(255),
+    farm_type VARCHAR(100),
+    crops TEXT,
+    programs_found INTEGER,
+    programs_data JSONB,
+    ai_response TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Farm Chat History
+DROP TABLE IF EXISTS farm_chat_history CASCADE;
+CREATE TABLE IF NOT EXISTS farm_chat_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    response TEXT,
+    key_points JSONB,
+    confidence DECIMAL(5,2),
+    model VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Carbon Footprint Records
+DROP TABLE IF EXISTS carbon_footprint_records CASCADE;
+CREATE TABLE IF NOT EXISTS carbon_footprint_records (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    farm_size DECIMAL(10,2),
+    crops TEXT,
+    total_co2_tons_per_year DECIMAL(10,2),
+    sustainability_score DECIMAL(5,2),
+    carbon_credits_estimate_usd DECIMAL(10,2),
+    breakdown JSONB,
+    reduction_recommendations JSONB,
+    ai_analysis TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add missing columns to harvest_predictions if they don't exist
+-- (handled via ALTER TABLE in migration below)
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_crop_diseases_user ON crop_diseases(user_id);
 CREATE INDEX IF NOT EXISTS idx_irrigation_user ON irrigation_records(user_id);
@@ -277,6 +360,12 @@ CREATE INDEX IF NOT EXISTS idx_uploaded_files_user ON uploaded_files(user_id);
 CREATE INDEX IF NOT EXISTS idx_weather_data_user ON weather_data(user_id);
 CREATE INDEX IF NOT EXISTS idx_field_locations_user ON field_locations(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
+CREATE INDEX IF NOT EXISTS idx_ai_results_user ON ai_results(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_results_feature ON ai_results(feature);
+CREATE INDEX IF NOT EXISTS idx_crop_recommendations_user ON crop_recommendations(user_id);
+CREATE INDEX IF NOT EXISTS idx_subsidy_searches_user ON subsidy_searches(user_id);
+CREATE INDEX IF NOT EXISTS idx_farm_chat_user ON farm_chat_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_carbon_footprint_user ON carbon_footprint_records(user_id);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()

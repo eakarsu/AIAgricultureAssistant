@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-const { generalLimiter, authLimiter } = require('./middleware/rateLimiter');
+const { generalLimiter, authLimiter, aiLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 const { morganMiddleware } = require('./middleware/logger');
 const pool = require('./config/database');
@@ -28,15 +28,15 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all in development
+      callback(new Error(`CORS policy: origin ${origin} not allowed`), false);
     }
   },
   credentials: true
 }));
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing with size limit
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Logging
 app.use(morganMiddleware);
@@ -45,6 +45,14 @@ app.use(morganMiddleware);
 app.use('/api/', generalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+
+// AI-specific rate limiting on all AI-powered endpoints
+app.use('/api/ai', aiLimiter);
+app.use('/api/crop-diseases', aiLimiter);
+app.use('/api/harvest', aiLimiter);
+app.use('/api/pests', aiLimiter);
+app.use('/api/soil', aiLimiter);
+app.use('/api/irrigation', aiLimiter);
 
 // Ensure logs directory exists
 const logsDir = path.join(__dirname, '../logs');
@@ -71,6 +79,7 @@ const adminRoutes = require('./routes/admin');
 const weatherRoutes = require('./routes/weather');
 const fieldsRoutes = require('./routes/fields');
 const feedbackRoutes = require('./routes/feedback');
+const aiRoutesNew = require('./routes/aiRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -88,6 +97,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/fields', fieldsRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/ai', aiRoutesNew);
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -211,3 +221,22 @@ app.listen(PORT, () => {
 }
 
 module.exports = app;
+
+// BATCH_00_AUDIT_MOUNTS
+app.use('/api/imagery-analysis', require('./routes/imageryAnalysis'));
+app.use('/api/irrigation-scheduler', require('./routes/irrigationScheduler'));
+app.use('/api/commodity-bridge', require('./routes/commodityBridge'));
+app.use('/api/iot-bridge', require('./routes/iotBridge'));
+app.use('/api/sustainability-score', require('./routes/sustainabilityScore'));
+
+// === Batch 00 Gaps & Frontend Mounts ===
+app.use('/api/gap-ai-irrigation-optimization-real-time', require('./routes/gap_ai_irrigation_optimization_real_time'));
+app.use('/api/gap-ai-disease-identification-leaf-plant', require('./routes/gap_ai_disease_identification_leaf_plant'));
+app.use('/api/gap-ai-soil-amendment-recommendation', require('./routes/gap_ai_soil_amendment_recommendation'));
+app.use('/api/gap-ai-weather-based-risk-alerts', require('./routes/gap_ai_weather_based_risk_alerts'));
+app.use('/api/gap-ai-market-price-prediction-optimal', require('./routes/gap_ai_market_price_prediction_optimal'));
+app.use('/api/gap-iot-sensor-ingestion-moisture-npk', require('./routes/gap_iot_sensor_ingestion_moisture_npk'));
+app.use('/api/gap-drone-imagery-analysis-pipeline', require('./routes/gap_drone_imagery_analysis_pipeline'));
+app.use('/api/gap-equipment-tractor-maintenance-tracking', require('./routes/gap_equipment_tractor_maintenance_tracking'));
+app.use('/api/gap-limited-multi-farm-agribusiness-rollup', require('./routes/gap_limited_multi_farm_agribusiness_rollup'));
+app.use('/api/gap-outbound-webhooks', require('./routes/gap_outbound_webhooks'));

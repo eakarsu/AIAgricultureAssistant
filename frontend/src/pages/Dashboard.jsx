@@ -14,8 +14,11 @@ export default function Dashboard() {
           api.get('/crop-diseases'), api.get('/irrigation'), api.get('/harvest'), api.get('/pests'), api.get('/soil')
         ]);
         setStats({
-          diseases: diseases.data.records?.length || 0, irrigation: irrigation.data.records?.length || 0,
-          harvest: harvest.data.records?.length || 0, pests: pests.data.records?.length || 0, soil: soil.data.records?.length || 0
+          diseases: diseases.data.pagination?.total ?? diseases.data.records?.length ?? 0,
+          irrigation: irrigation.data.pagination?.total ?? irrigation.data.records?.length ?? 0,
+          harvest: harvest.data.pagination?.total ?? harvest.data.records?.length ?? 0,
+          pests: pests.data.pagination?.total ?? pests.data.records?.length ?? 0,
+          soil: soil.data.pagination?.total ?? soil.data.records?.length ?? 0
         });
       } catch (err) { console.error('Failed to fetch stats:', err); }
     };
@@ -23,6 +26,21 @@ export default function Dashboard() {
   }, [api]);
 
   const sections = [
+    {
+      title: 'AI Advisors',
+      cards: [
+        { id: 'crop-rotation', icon: '🔄', title: 'Crop Rotation Advisor', description: 'AI recommends next-season crops based on soil & disease pressure', path: '/ai/crop-rotation', cardClass: 'rotation-card' },
+        { id: 'yield-prediction', icon: '🌾', title: 'Yield Prediction Model', description: 'Forecast harvest yield with confidence ranges & revenue estimates', path: '/ai/yield-prediction', cardClass: 'yield-card' },
+        { id: 'pest-forecast', icon: '🦟', title: 'Pest Outbreak Forecast', description: 'Predict pest outbreak probability 2-3 weeks ahead', path: '/ai/pest-forecast', cardClass: 'pest-forecast-card' },
+        { id: 'subsidies', icon: '💵', title: 'Subsidy & Grant Finder', description: 'AI-matched USDA programs & conservation grants', path: '/ai/subsidies', cardClass: 'subsidy-card' },
+        { id: 'farm-chat', icon: '💬', title: 'Farm AI Chat', description: 'Ask your AI advisor anything about your farm — crops, pests, soil, markets', path: '/ai/farm-chat', cardClass: 'chat-card' },
+        { id: 'carbon-footprint', icon: '🌿', title: 'Carbon Footprint Calculator', description: 'Calculate your farm\'s CO2 emissions and explore carbon credit opportunities', path: '/ai/carbon-footprint', cardClass: 'carbon-card' },
+        { id: 'weekly-report', icon: '📋', title: 'Weekly Farm Report', description: 'AI-generated comprehensive weekly summary of your farm operations', path: '/ai/weekly-report', cardClass: 'report-card' },
+        { id: 'weather-risk-alert', icon: '⛈️', title: 'Weather Risk Alerts', description: 'Hail, frost, drought, heat, flood and storm alerts with protective actions', path: '/ai/weather-risk-alert', cardClass: 'weather-alert-card' },
+        { id: 'soil-amendment', icon: '🌱', title: 'Soil Amendment Recommender', description: 'Lime, gypsum, NPK and micronutrient plan from your soil test', path: '/ai/soil-amendment', cardClass: 'soil-amendment-card' },
+        { id: 'ai-results', icon: '📈', title: 'AI Results History', description: 'Browse all past AI analyses, confidence scores, and model usage', path: '/ai/results', cardClass: 'ai-history-card' },
+      ]
+    },
     {
       title: 'AI Features',
       cards: [

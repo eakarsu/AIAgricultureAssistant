@@ -26,6 +26,21 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import ContactPage from './pages/ContactPage';
 import OnboardingPage from './pages/OnboardingPage';
+import CropRotationPage from './pages/CropRotationPage';
+import YieldPredictionPage from './pages/YieldPredictionPage';
+import PestForecastPage from './pages/PestForecastPage';
+import SubsidiesPage from './pages/SubsidiesPage';
+import FarmChatPage from './pages/FarmChatPage';
+import CarbonFootprintPage from './pages/CarbonFootprintPage';
+import WeeklyReportPage from './pages/WeeklyReportPage';
+import AIResultsPage from './pages/AIResultsPage';
+import WeatherRiskAlertPage from './pages/WeatherRiskAlertPage';
+import SoilAmendmentPage from './pages/SoilAmendmentPage';
+import DiseaseIdTextPage from './pages/DiseaseIdTextPage';
+import MarketPricePredictionPage from './pages/MarketPricePredictionPage';
+import SustainabilityScorePage from './pages/SustainabilityScorePage';
+import IrrigationOptimizeTextPage from './pages/IrrigationOptimizeTextPage';
+import IotSensorSummaryPage from './pages/IotSensorSummaryPage';
 
 function Footer() {
   return (
@@ -78,6 +93,22 @@ function AppContent() {
                   <Route path="/privacy" element={<PrivacyPolicyPage />} />
                   <Route path="/terms" element={<TermsOfServicePage />} />
                   <Route path="/contact" element={<ContactPage />} />
+                  {/* AI Advisor Routes */}
+                  <Route path="/ai/crop-rotation" element={<CropRotationPage />} />
+                  <Route path="/ai/yield-prediction" element={<YieldPredictionPage />} />
+                  <Route path="/ai/pest-forecast" element={<PestForecastPage />} />
+                  <Route path="/ai/subsidies" element={<SubsidiesPage />} />
+                  <Route path="/ai/farm-chat" element={<FarmChatPage />} />
+                  <Route path="/ai/carbon-footprint" element={<CarbonFootprintPage />} />
+                  <Route path="/ai/weekly-report" element={<WeeklyReportPage />} />
+                  <Route path="/ai/results" element={<AIResultsPage />} />
+                  <Route path="/ai/weather-risk-alert" element={<WeatherRiskAlertPage />} />
+                  <Route path="/ai/soil-amendment" element={<SoilAmendmentPage />} />
+                  <Route path="/ai/disease-id-text" element={<DiseaseIdTextPage />} />
+                  <Route path="/ai/market-price-prediction" element={<MarketPricePredictionPage />} />
+                  <Route path="/ai/sustainability-score" element={<SustainabilityScorePage />} />
+                  <Route path="/ai/irrigation-optimize-text" element={<IrrigationOptimizeTextPage />} />
+                  <Route path="/ai/iot-sensor-summary" element={<IotSensorSummaryPage />} />
                 </Routes>
               </main>
               <Footer />

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AIOutput from './AIOutput';
+import Pagination from './Pagination';
 
 export default function ListPage({
   title, description, apiEndpoint, columns, icon,
@@ -12,14 +13,22 @@ export default function ListPage({
   const [showForm, setShowForm] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 20;
   const { api } = useAuth();
   const navigate = useNavigate();
 
-  const fetchRecords = useCallback(async () => {
+  const fetchRecords = useCallback(async (pageNum = 1) => {
     try {
       setLoading(true);
-      const res = await api.get(apiEndpoint);
+      const res = await api.get(`${apiEndpoint}?page=${pageNum}&limit=${LIMIT}`);
       setRecords(res.data.records || []);
+      if (res.data.pagination) {
+        setTotalPages(res.data.pagination.totalPages || 1);
+        setTotal(res.data.pagination.total || 0);
+      }
     } catch (err) {
       console.error('Failed to fetch records:', err);
     } finally {
@@ -27,7 +36,12 @@ export default function ListPage({
     }
   }, [api, apiEndpoint]);
 
-  useEffect(() => { fetchRecords(); }, [fetchRecords]);
+  useEffect(() => { fetchRecords(page); }, [fetchRecords, page]);
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    fetchRecords(newPage);
+  };
 
   const handleRowClick = (record) => { setSelectedRecord(record); setShowDetail(true); };
 
@@ -35,7 +49,7 @@ export default function ListPage({
     if (window.confirm('Are you sure you want to delete this record?')) {
       try {
         await api.delete(`${apiEndpoint}/${id}`);
-        fetchRecords();
+        fetchRecords(page);
         setShowDetail(false);
       } catch (err) { console.error('Failed to delete:', err); }
     }
@@ -43,7 +57,11 @@ export default function ListPage({
 
   const handleEdit = (record) => { setSelectedRecord(record); setShowDetail(false); setShowForm(true); };
 
-  const handleFormSubmit = async () => { await fetchRecords(); setShowForm(false); setSelectedRecord(null); };
+  const handleFormSubmit = async () => {
+    await fetchRecords(page);
+    setShowForm(false);
+    setSelectedRecord(null);
+  };
 
   return (
     <div>
@@ -53,6 +71,7 @@ export default function ListPage({
         <div>
           <h1 className="page-title">{icon} {title}</h1>
           <p className="page-description">{description}</p>
+          {total > 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 4 }}>{total} total record{total !== 1 ? 's' : ''}</p>}
         </div>
         <button className="btn btn-primary" onClick={() => { setSelectedRecord(null); setShowForm(true); }}>+ New Record</button>
       </div>
@@ -60,7 +79,7 @@ export default function ListPage({
       <div className="card">
         {loading ? (
           <div className="loading"><div className="loading-spinner"></div><p className="loading-text">Loading records...</p></div>
-        ) : records.length === 0 ? (
+        ) : records.length === 0 && page === 1 ? (
           <div className="empty-state">
             <div className="empty-state-icon" aria-hidden="true">{emptyIcon}</div>
             <h3 className="empty-state-title">{emptyTitle}</h3>
@@ -68,22 +87,29 @@ export default function ListPage({
             <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Create First Record</button>
           </div>
         ) : (
-          <div className="data-table-container">
-            <table className="data-table" role="grid">
-              <thead>
-                <tr>{columns.map((col) => (<th key={col.key} scope="col">{col.label}</th>))}</tr>
-              </thead>
-              <tbody>
-                {records.map((record) => (
-                  <tr key={record.id} onClick={() => handleRowClick(record)} tabIndex={0} role="row" onKeyDown={(e) => e.key === 'Enter' && handleRowClick(record)} aria-label={`View record ${record.id}`}>
-                    {columns.map((col) => (
-                      <td key={col.key}>{col.render ? col.render(record[col.key], record) : record[col.key] || '-'}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="data-table-container">
+              <table className="data-table" role="grid">
+                <thead>
+                  <tr>{columns.map((col) => (<th key={col.key} scope="col">{col.label}</th>))}</tr>
+                </thead>
+                <tbody>
+                  {records.map((record) => (
+                    <tr key={record.id} onClick={() => handleRowClick(record)} tabIndex={0} role="row" onKeyDown={(e) => e.key === 'Enter' && handleRowClick(record)} aria-label={`View record ${record.id}`}>
+                      {columns.map((col) => (
+                        <td key={col.key}>{col.render ? col.render(record[col.key], record) : record[col.key] || '-'}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
+                <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+              </div>
+            )}
+          </>
         )}
       </div>
 

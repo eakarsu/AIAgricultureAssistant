@@ -11,13 +11,25 @@ export default function WeatherPage() {
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
-    Promise.all([
-      api.get('/weather'),
-      api.get('/weather/forecast?lat=38.58&lon=-121.49')
-    ]).then(([weather, fc]) => {
-      setWeatherData(weather.data.records || []);
-      setForecast(fc.data.forecast);
-    }).catch(console.error).finally(() => setLoading(false));
+    // Try to get user's location for accurate weather; fall back to a US default
+    const fetchWeather = (lat = 38.9, lon = -77.0) => {
+      Promise.all([
+        api.get('/weather'),
+        api.get(`/weather/forecast?lat=${lat}&lon=${lon}`)
+      ]).then(([weather, fc]) => {
+        setWeatherData(weather.data.records || []);
+        setForecast(fc.data.forecast);
+      }).catch(console.error).finally(() => setLoading(false));
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+        () => fetchWeather() // fallback if denied
+      );
+    } else {
+      fetchWeather();
+    }
   }, [api]);
 
   const conditionIcons = { 'Sunny': '☀️', 'Partly Cloudy': '⛅', 'Cloudy': '☁️', 'Rainy': '🌧️', 'Foggy': '🌫️', 'Hot': '🌡️', 'Hot & Dry': '🌡️', 'Windy': '💨', 'Warm': '🌤️', 'Pleasant': '🌤️', 'Mild': '🌤️', 'Clear': '☀️', 'Dry': '☀️', 'Warm & Humid': '🌤️', 'Controlled': '🏠', 'Thunderstorm': '⛈️' };
