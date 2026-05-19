@@ -99,6 +99,9 @@ app.use('/api/fields', fieldsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ai', aiRoutesNew);
 
+// Custom Views (FieldMap / CropYieldChart / PlantingPlanPDF / IrrigationScheduler)
+app.use('/api/custom-views', require('./routes/customViews'));
+
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'unknown';

@@ -41,6 +41,7 @@ import MarketPricePredictionPage from './pages/MarketPricePredictionPage';
 import SustainabilityScorePage from './pages/SustainabilityScorePage';
 import IrrigationOptimizeTextPage from './pages/IrrigationOptimizeTextPage';
 import IotSensorSummaryPage from './pages/IotSensorSummaryPage';
+import CustomViewsPage from './pages/CustomViewsPage';
 
 function Footer() {
   return (
@@ -109,6 +110,7 @@ function AppContent() {
                   <Route path="/ai/sustainability-score" element={<SustainabilityScorePage />} />
                   <Route path="/ai/irrigation-optimize-text" element={<IrrigationOptimizeTextPage />} />
                   <Route path="/ai/iot-sensor-summary" element={<IotSensorSummaryPage />} />
+                  <Route path="/custom-views" element={<CustomViewsPage />} />
                 </Routes>
               </main>
               <Footer />
