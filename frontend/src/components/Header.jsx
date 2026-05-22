@@ -52,6 +52,14 @@ export default function Header() {
             />
           </form>
 
+          <button className="btn btn-icon header-icon-btn" onClick={() => { navigate('/custom-views'); setShowMobileMenu(false); }} aria-label="Farm Views" title="Farm Views">
+            🌱 Farm Views
+          </button>
+
+          <button className="btn btn-icon header-icon-btn" onClick={() => { navigate('/ai/irrigation-realtime'); setShowMobileMenu(false); }} aria-label="Realtime Irrigation" title="Realtime Irrigation">
+            💧 Irrigation AI
+          </button>
+
           <button className="btn btn-icon header-icon-btn" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title="Toggle theme">
             {theme === 'light' ? '🌙' : '☀️'}
           </button>

@@ -49,7 +49,7 @@ export default function FarmChatPage() {
     }
   };
 
-  const useFollowUp = (question) => {
+  const applyFollowUp = (question) => {
     setInput(question);
   };
 
@@ -126,7 +126,7 @@ export default function FarmChatPage() {
                       {msg.follow_up_questions?.length > 0 && (
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                           {msg.follow_up_questions.map((fq, j) => (
-                            <button key={j} className="btn btn-sm btn-ghost" style={{ fontSize: '0.8rem' }} onClick={() => useFollowUp(fq)}>
+                            <button key={j} className="btn btn-sm btn-ghost" style={{ fontSize: '0.8rem' }} onClick={() => applyFollowUp(fq)}>
                               {fq}
                             </button>
                           ))}

@@ -60,7 +60,7 @@ async function persist(input, output) {
 async function callOpenRouter(prompt) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return { stub: true, note: 'OPENROUTER_API_KEY not set. v0 stub response.' };
+    return null;
   }
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -87,6 +87,45 @@ async function callOpenRouter(prompt) {
   }
 }
 
+function buildIrrigationSchedule(input) {
+  const crop = input.crop || input.crop_type || 'crop';
+  const soilMoisture = Number(input.soil_moisture_pct || input.moisture_pct || 24);
+  const targetMoisture = Number(input.target_moisture_pct || 32);
+  const fieldAreaHa = Number(input.field_area_ha || input.hectares || 10);
+  const evapMm = Number(input.evapotranspiration_mm || input.et_mm || 5);
+  const rainMm = Number(input.forecast_rain_mm || input.rain_mm || 0);
+  const deficitPct = Math.max(0, targetMoisture - soilMoisture);
+  const waterDepthMm = Math.max(0, deficitPct * 2.2 + evapMm - rainMm);
+  const volumeM3 = waterDepthMm * fieldAreaHa * 10;
+  const urgency = waterDepthMm > 25 ? 'critical' : waterDepthMm > 12 ? 'schedule_today' : waterDepthMm > 3 ? 'monitor' : 'skip';
+
+  return {
+    mode: 'deterministic_fallback',
+    crop,
+    urgency,
+    recommendation: urgency === 'skip'
+      ? 'Skip irrigation; forecast rain and current moisture cover near-term demand.'
+      : `Apply ${waterDepthMm.toFixed(1)} mm across ${fieldAreaHa} ha (${volumeM3.toFixed(0)} m3).`,
+    schedule: {
+      start_window: urgency === 'critical' ? 'next cool low-wind window' : 'overnight or early morning',
+      duration_hours_estimate: Number(Math.max(1, waterDepthMm / Number(input.system_mm_per_hour || 8)).toFixed(1)),
+      pulse_strategy: waterDepthMm > 20 ? 'split into 2 pulses to reduce runoff' : 'single pass acceptable',
+    },
+    drivers: {
+      soil_moisture_pct: soilMoisture,
+      target_moisture_pct: targetMoisture,
+      evapotranspiration_mm: evapMm,
+      forecast_rain_mm: rainMm,
+      field_area_ha: fieldAreaHa,
+    },
+    safeguards: [
+      'Pause if wind exceeds nozzle drift threshold.',
+      'Recheck soil moisture 6-12 hours after irrigation.',
+      'Do not irrigate immediately before pesticide application unless label allows it.',
+    ],
+  };
+}
+
 router.get('/health', (req, res) => {
   res.json({ feature: 'ai-irrigation-optimization-real-time', status: 'ok', version: 'v0', kind: 'gap' });
 });
@@ -96,11 +135,13 @@ router.post('/run', async (req, res) => {
     const input = req.body || {};
     const prompt = typeof input.input === 'string' ? input.input : JSON.stringify(input);
     const aiResult = await callOpenRouter(prompt);
+    const fallback = aiResult ? null : buildIrrigationSchedule(input);
     const output = {
       feature: 'ai-irrigation-optimization-real-time',
       title: FEATURE_TITLE,
       receivedKeys: Object.keys(input),
       ai: aiResult,
+      result: fallback || aiResult,
     };
     persist(input, output).catch(() => {});
     res.json({ success: true, result: output });

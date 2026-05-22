@@ -42,6 +42,10 @@ import SustainabilityScorePage from './pages/SustainabilityScorePage';
 import IrrigationOptimizeTextPage from './pages/IrrigationOptimizeTextPage';
 import IotSensorSummaryPage from './pages/IotSensorSummaryPage';
 import CustomViewsPage from './pages/CustomViewsPage';
+import GapAiIrrigationOptimizationRealTime from './pages/GapAiIrrigationOptimizationRealTime';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 function Footer() {
   return (
@@ -64,6 +68,9 @@ function AppContent() {
 
   return (
     <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
@@ -109,6 +116,7 @@ function AppContent() {
                   <Route path="/ai/market-price-prediction" element={<MarketPricePredictionPage />} />
                   <Route path="/ai/sustainability-score" element={<SustainabilityScorePage />} />
                   <Route path="/ai/irrigation-optimize-text" element={<IrrigationOptimizeTextPage />} />
+                  <Route path="/ai/irrigation-realtime" element={<GapAiIrrigationOptimizationRealTime />} />
                   <Route path="/ai/iot-sensor-summary" element={<IotSensorSummaryPage />} />
                   <Route path="/custom-views" element={<CustomViewsPage />} />
                 </Routes>
