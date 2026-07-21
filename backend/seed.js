@@ -10,10 +10,16 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'ai_agriculture',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  password: process.env.DB_PASSWORD,
 });
 
 async function seed() {
+  if (process.env.RESET_DATABASE !== '1' || process.env.SEED_DEMO_DATA !== '1') {
+    throw new Error('Refusing destructive seed: set RESET_DATABASE=1 and SEED_DEMO_DATA=1 explicitly');
+  }
+  if (!process.env.SEED_ADMIN_EMAIL || !process.env.SEED_ADMIN_PASSWORD) {
+    throw new Error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are required');
+  }
   console.log('Starting database seeding...');
 
   try {
@@ -25,7 +31,7 @@ async function seed() {
 
     // Create demo user (admin)
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(process.env.DEMO_PASSWORD || 'demo123456', salt);
+    const hashedPassword = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD, salt);
 
     const userResult = await pool.query(
       `INSERT INTO users (email, password, name, phone, farm_name, farm_size, location, bio, role, email_verified)
@@ -33,7 +39,7 @@ async function seed() {
        ON CONFLICT (email) DO UPDATE SET password = $2, role = $9
        RETURNING id`,
       [
-        process.env.DEMO_EMAIL || 'demo@agriculture.ai',
+        process.env.SEED_ADMIN_EMAIL,
         hashedPassword,
         'Demo User',
         '+1-555-0123',

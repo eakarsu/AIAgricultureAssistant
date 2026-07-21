@@ -12,7 +12,7 @@ jest.mock('../config/database', () => {
 });
 
 // Set JWT_SECRET for tests
-process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.JWT_SECRET = 'test-jwt-secret-with-at-least-32-characters';
 process.env.NODE_ENV = 'test';
 
 const app = require('../server');
@@ -121,7 +121,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'new@test.com', password: 'password123', name: 'New User' });
+        .send({ email: 'new@test.com', password: 'password12345', name: 'New User' });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.token).toBeDefined();
@@ -235,7 +235,8 @@ describe('Auth Routes', () => {
         .send({ email: 'test@test.com' });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.token).toBeDefined();
+      expect(res.body.token).toBeUndefined();
+      expect(res.body.message).toContain('If an account exists');
     });
   });
 
@@ -255,7 +256,7 @@ describe('Auth Routes', () => {
         .send({ token: 'abc', password: '12345' });
 
       expect(res.statusCode).toBe(400);
-      expect(res.body.error).toContain('at least 6');
+      expect(res.body.error).toContain('at least 12');
     });
 
     it('should return 400 if token is invalid or expired', async () => {
@@ -303,16 +304,6 @@ describe('Auth Routes', () => {
     });
   });
 
-  // ========== GET /api/auth/demo-credentials ==========
-  describe('GET /api/auth/demo-credentials', () => {
-    it('should return demo credentials', async () => {
-      const res = await request(app).get('/api/auth/demo-credentials');
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.email).toBeDefined();
-      expect(res.body.password).toBeDefined();
-    });
-  });
 });
 
 // ========== Health & Docs Endpoints ==========

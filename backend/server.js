@@ -98,6 +98,7 @@ app.use('/api/weather', weatherRoutes);
 app.use('/api/fields', fieldsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ai', aiRoutesNew);
+app.use('/api/operations', require('./routes/operationsWorkflow'));
 
 // Custom Views (FieldMap / CropYieldChart / PlantingPlanPDF / IrrigationScheduler)
 app.use('/api/custom-views', require('./routes/customViews'));
@@ -187,7 +188,7 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-if (process.env.NODE_ENV !== 'test') {
+if (require.main === module) {
 app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
@@ -224,22 +225,3 @@ app.listen(PORT, () => {
 }
 
 module.exports = app;
-
-// BATCH_00_AUDIT_MOUNTS
-app.use('/api/imagery-analysis', require('./routes/imageryAnalysis'));
-app.use('/api/irrigation-scheduler', require('./routes/irrigationScheduler'));
-app.use('/api/commodity-bridge', require('./routes/commodityBridge'));
-app.use('/api/iot-bridge', require('./routes/iotBridge'));
-app.use('/api/sustainability-score', require('./routes/sustainabilityScore'));
-
-// === Batch 00 Gaps & Frontend Mounts ===
-app.use('/api/gap-ai-irrigation-optimization-real-time', require('./routes/gap_ai_irrigation_optimization_real_time'));
-app.use('/api/gap-ai-disease-identification-leaf-plant', require('./routes/gap_ai_disease_identification_leaf_plant'));
-app.use('/api/gap-ai-soil-amendment-recommendation', require('./routes/gap_ai_soil_amendment_recommendation'));
-app.use('/api/gap-ai-weather-based-risk-alerts', require('./routes/gap_ai_weather_based_risk_alerts'));
-app.use('/api/gap-ai-market-price-prediction-optimal', require('./routes/gap_ai_market_price_prediction_optimal'));
-app.use('/api/gap-iot-sensor-ingestion-moisture-npk', require('./routes/gap_iot_sensor_ingestion_moisture_npk'));
-app.use('/api/gap-drone-imagery-analysis-pipeline', require('./routes/gap_drone_imagery_analysis_pipeline'));
-app.use('/api/gap-equipment-tractor-maintenance-tracking', require('./routes/gap_equipment_tractor_maintenance_tracking'));
-app.use('/api/gap-limited-multi-farm-agribusiness-rollup', require('./routes/gap_limited_multi_farm_agribusiness_rollup'));
-app.use('/api/gap-outbound-webhooks', require('./routes/gap_outbound_webhooks'));

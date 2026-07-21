@@ -7,6 +7,10 @@ const { authMiddleware } = require('../middleware/auth');
 require('dotenv').config();
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be configured with at least 32 characters');
+}
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -15,6 +19,9 @@ router.post('/register', async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+    if (password.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters' });
     }
 
     const existingUser = await pool.query(
@@ -31,7 +38,7 @@ router.post('/register', async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     const result = await pool.query(
-      'INSERT INTO users (email, password, name, verification_token) VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at',
+      'INSERT INTO users (email, password, name, verification_token) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role, created_at',
       [email, hashedPassword, name || '', verificationToken]
     );
 
@@ -48,8 +55,8 @@ router.post('/register', async (req, res) => {
     );
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -90,8 +97,8 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -197,10 +204,7 @@ router.post('/forgot-password', async (req, res) => {
       [user.rows[0].id, resetToken, expiresAt]
     );
 
-    // In production, send email with nodemailer
-    console.log(`Password reset token for ${email}: ${resetToken}`);
-
-    res.json({ message: 'If an account exists with that email, a reset link has been sent.', token: resetToken });
+    res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -216,8 +220,8 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (password.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters' });
     }
 
     const resetResult = await pool.query(
@@ -272,9 +276,7 @@ router.post('/send-verification', authMiddleware, async (req, res) => {
       [verificationToken, req.user.id]
     );
 
-    console.log(`Verification token for user ${req.user.id}: ${verificationToken}`);
-
-    res.json({ message: 'Verification email sent', token: verificationToken });
+    res.json({ message: 'Verification request recorded. Configure an email provider to deliver it.' });
   } catch (error) {
     console.error('Send verification error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -285,8 +287,8 @@ router.post('/send-verification', authMiddleware, async (req, res) => {
 router.post('/refresh-token', authMiddleware, async (req, res) => {
   try {
     const newToken = jwt.sign(
-      { id: req.user.id, email: req.user.email },
-      process.env.JWT_SECRET,
+      { id: req.user.id, email: req.user.email, role: req.user.role },
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -295,14 +297,6 @@ router.post('/refresh-token', authMiddleware, async (req, res) => {
     console.error('Token refresh error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-});
-
-// Get demo credentials
-router.get('/demo-credentials', (req, res) => {
-  res.json({
-    email: process.env.DEMO_EMAIL || 'demo@agriculture.ai',
-    password: process.env.DEMO_PASSWORD || 'demo123456'
-  });
 });
 
 module.exports = router;

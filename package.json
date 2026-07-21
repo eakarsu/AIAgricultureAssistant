@@ -8,8 +8,11 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon backend/server.js",
     "client": "cd frontend && npm start",
-    "seed": "node backend/seed.js",
-    "setup": "npm install && cd frontend && npm install --legacy-peer-deps",
+    "run": "bash start.sh",
+    "bootstrap": "bash scripts/bootstrap.sh",
+    "migrate": "bash scripts/migrate.sh",
+    "seed:demo": "bash scripts/seed-demo.sh",
+    "test:unit": "node --test backend/tests/*.test.js",
     "test": "jest --testPathPatterns=backend/__tests__ --forceExit --detectOpenHandles",
     "test:watch": "jest --testPathPatterns=backend/__tests__ --watch --forceExit",
     "test:coverage": "jest --testPathPatterns=backend/__tests__ --coverage --forceExit --detectOpenHandles"
