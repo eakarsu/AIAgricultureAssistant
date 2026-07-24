@@ -411,7 +411,7 @@ async function seed() {
     console.log('\n=== Database seeding completed successfully! ===\n');
     console.log(`Demo Login Credentials:`);
     console.log(`  Email: ${process.env.DEMO_EMAIL || 'demo@agriculture.ai'}`);
-    console.log(`  Password: ${process.env.DEMO_PASSWORD || 'demo123456'}`);
+    console.log('Demo login users provisioned from the local environment.');
     console.log(`  Role: admin`);
 
   } catch (error) {

@@ -16,7 +16,7 @@ export default function LoginPage() {
       const res = await api.get('/auth/demo-credentials');
       setEmail(res.data.email); setPassword(res.data.password);
     } catch {
-      setEmail('demo@agriculture.ai'); setPassword('demo123456');
+      setEmail(process.env.REACT_APP_DEMO_EMAIL || ''); setPassword(process.env.REACT_APP_DEMO_PASSWORD || '');
     } finally { setLoading(false); }
   };
 
