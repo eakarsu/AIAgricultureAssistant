@@ -101,7 +101,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'existing@test.com', password: 'password123' });
+        .send({ email: 'existing@test.com', password: 'RuntimePass123!' });
 
       expect(res.statusCode).toBe(400);
       expect(res.body.error).toBe('User already exists with this email');
@@ -121,7 +121,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'new@test.com', password: 'password12345', name: 'New User' });
+        .send({ email: 'new@test.com', password: 'RuntimePass123!', name: 'New User' });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.token).toBeDefined();

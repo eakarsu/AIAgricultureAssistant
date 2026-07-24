@@ -83,6 +83,7 @@ const aiRoutesNew = require('./routes/aiRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/runtime-ai', aiLimiter, require('./routes/runtimeAi'));
 app.use('/api/crop-diseases', cropDiseasesRoutes);
 app.use('/api/irrigation', irrigationRoutes);
 app.use('/api/harvest', harvestRoutes);

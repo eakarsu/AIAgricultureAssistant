@@ -11,6 +11,7 @@
     "run": "bash start.sh",
     "bootstrap": "bash scripts/bootstrap.sh",
     "migrate": "bash scripts/migrate.sh",
+    "create-admin": "node backend/scripts/create-admin.js",
     "seed:demo": "bash scripts/seed-demo.sh",
     "test:unit": "node --test backend/tests/*.test.js",
     "test": "jest --testPathPatterns=backend/__tests__ --forceExit --detectOpenHandles",
@@ -30,12 +31,12 @@
     "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",
     "node-cache": "^5.1.2",
-    "nodemailer": "^8.0.1",
+    "nodemailer": "^9.0.3",
     "pdfkit": "^0.18.0",
     "pg": "^8.11.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "uuid": "^9.0.0",
+    "uuid": "^11.1.1",
     "winston": "^3.19.0"
   },
   "devDependencies": {
