@@ -35,13 +35,13 @@ export default function LoginPage() {
           <h1 className="login-title">AI Agriculture Assistant</h1>
           <p className="login-subtitle">Smart farming powered by artificial intelligence</p>
         </div>
-        <button className="btn btn-primary demo-btn" onClick={handleDemoLogin} disabled={loading}>🚀 Auto-Fill Demo Credentials</button>
-        <div className="login-divider"><span>then click Login</span></div>
+        <button className="btn btn-primary demo-btn" onClick={handleDemoLogin} disabled={loading}>Auto Fill Demo Credentials</button>
+        <div className="login-divider"><span>then click Sign In</span></div>
         {error && <div className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group"><label className="form-label" htmlFor="login-email">Email</label><input id="login-email" type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required /></div>
           <div className="form-group"><label className="form-label" htmlFor="login-password">Password</label><input id="login-password" type="password" className="form-input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required /></div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
         </form>
         <div className="mt-2 text-center"><Link to="/forgot-password" className="text-link">Forgot Password?</Link></div>
       </div>

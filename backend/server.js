@@ -11,6 +11,7 @@ const { morganMiddleware } = require('./middleware/logger');
 const pool = require('./config/database');
 
 const app = express();
+app.set('trust proxy', 'loopback');
 
 // Security headers
 app.use(helmet({
@@ -22,6 +23,10 @@ app.use(helmet({
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',')
   : ['http://localhost:3000', 'http://localhost:3001'];
+if (process.env.NODE_ENV !== 'production') {
+  const backendPort = process.env.PORT || process.env.BACKEND_PORT || '30024';
+  allowedOrigins.push(`http://127.0.0.1:${backendPort}`, `http://localhost:${backendPort}`);
+}
 
 app.use(cors({
   origin: (origin, callback) => {
