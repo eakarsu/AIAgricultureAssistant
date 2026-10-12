@@ -1,3 +1,4 @@
+import AIReportLibrary from "./components/AIReportLibrary";
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -27,6 +28,7 @@ import TermsOfServicePage from './pages/TermsOfServicePage';
 import ContactPage from './pages/ContactPage';
 import OnboardingPage from './pages/OnboardingPage';
 import CropRotationPage from './pages/CropRotationPage';
+import FarmOperationsReview from './pages/FarmOperationsReview';
 import YieldPredictionPage from './pages/YieldPredictionPage';
 import PestForecastPage from './pages/PestForecastPage';
 import SubsidiesPage from './pages/SubsidiesPage';
@@ -67,7 +69,7 @@ function AppContent() {
   const { user } = useAuth();
 
   return (
-    <Routes>
+    <><AIReportLibrary floating /><Routes>
         <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
         <Route path="/codex/operations" element={<CodexOperationsFeature />} />
 
@@ -102,6 +104,7 @@ function AppContent() {
                   <Route path="/terms" element={<TermsOfServicePage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   {/* AI Advisor Routes */}
+                  <Route path="/ai/operations-review" element={<FarmOperationsReview />} />
                   <Route path="/ai/crop-rotation" element={<CropRotationPage />} />
                   <Route path="/ai/yield-prediction" element={<YieldPredictionPage />} />
                   <Route path="/ai/pest-forecast" element={<PestForecastPage />} />
@@ -126,7 +129,7 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-    </Routes>
+    </Routes></>
   );
 }
 

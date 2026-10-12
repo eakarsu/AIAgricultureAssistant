@@ -10,7 +10,7 @@ export default function MarketPricePredictionPage() {
       fields={[
         { name: 'commodity', label: 'Commodity', required: true, placeholder: 'e.g. Corn, Soybeans, Wheat' },
         { name: 'region', label: 'Region', placeholder: 'e.g. US Midwest' },
-        { name: 'horizon_days', label: 'Horizon (days)', type: 'number', placeholder: '30' },
+        { name: 'horizon_days', label: 'Horizon (days)', type: 'number', min: 1, max: 180, step: 1, placeholder: '30' },
         { name: 'recent_prices', label: 'Recent Prices (paste text or JSON)', type: 'textarea', rows: 6, placeholder: 'e.g. 2025-04-01: 4.80, 2025-04-08: 4.92, ...' },
       ]}
     />

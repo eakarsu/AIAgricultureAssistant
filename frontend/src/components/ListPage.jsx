@@ -16,21 +16,23 @@ export default function ListPage({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [error,setError]=useState('');
   const LIMIT = 20;
   const { api } = useAuth();
   const navigate = useNavigate();
 
   const fetchRecords = useCallback(async (pageNum = 1) => {
     try {
-      setLoading(true);
+      setLoading(true);setError('');
       const res = await api.get(`${apiEndpoint}?page=${pageNum}&limit=${LIMIT}`);
-      setRecords(res.data.records || []);
+      if(!Array.isArray(res.data.records)||!Number.isFinite(Number(res.data.pagination?.total)))throw Error('The native list response is malformed. Retry.');
+      setRecords(res.data.records);
       if (res.data.pagination) {
         setTotalPages(res.data.pagination.totalPages || 1);
         setTotal(res.data.pagination.total || 0);
       }
     } catch (err) {
-      console.error('Failed to fetch records:', err);
+      setError(err.response?.data?.error||err.message||'Native records could not be loaded. Retry.');
     } finally {
       setLoading(false);
     }
@@ -40,10 +42,10 @@ export default function ListPage({
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
-    fetchRecords(newPage);
+
   };
 
-  const handleRowClick = (record) => { setSelectedRecord(record); setShowDetail(true); };
+  const handleRowClick = async(record)=>{setError('');try{const result=await api.get(`${apiEndpoint}/${record.id}`);if(!result.data.record||Number(result.data.record.id)!==Number(record.id))throw Error('The native detail response is malformed.');setSelectedRecord(result.data.record);setShowDetail(true);}catch(error){setError(error.response?.data?.error||error.message||'Native details could not be loaded. Retry.');}};
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this record?')) {
@@ -51,7 +53,7 @@ export default function ListPage({
         await api.delete(`${apiEndpoint}/${id}`);
         fetchRecords(page);
         setShowDetail(false);
-      } catch (err) { console.error('Failed to delete:', err); }
+      } catch (err) { setError(err.response?.data?.error||err.message||'Native delete failed. Retry.'); }
     }
   };
 
@@ -76,6 +78,7 @@ export default function ListPage({
         <button className="btn btn-primary" onClick={() => { setSelectedRecord(null); setShowForm(true); }}>+ New Record</button>
       </div>
 
+      {error&&<p role="alert" className="alert alert-error">{error}<button type="button" onClick={()=>fetchRecords(page)}>Retry</button></p>}
       <div className="card">
         {loading ? (
           <div className="loading"><div className="loading-spinner"></div><p className="loading-text">Loading records...</p></div>
@@ -97,7 +100,7 @@ export default function ListPage({
                   {records.map((record) => (
                     <tr key={record.id} onClick={() => handleRowClick(record)} tabIndex={0} role="row" onKeyDown={(e) => e.key === 'Enter' && handleRowClick(record)} aria-label={`View record ${record.id}`}>
                       {columns.map((col) => (
-                        <td key={col.key}>{col.render ? col.render(record[col.key], record) : record[col.key] || '-'}</td>
+                        <td key={col.key}>{col.render ? col.render(record[col.key], record) : record[col.key] ?? '-'}</td>
                       ))}
                     </tr>
                   ))}
@@ -125,18 +128,18 @@ export default function ListPage({
                 {columns.map((col) => (
                   <div key={col.key} className="detail-item">
                     <div className="detail-item-label">{col.label}</div>
-                    <div className="detail-item-value">{col.render ? col.render(selectedRecord[col.key], selectedRecord) : selectedRecord[col.key] || '-'}</div>
+                    <div className="detail-item-value">{col.render ? col.render(selectedRecord[col.key], selectedRecord) : selectedRecord[col.key] ?? '-'}</div>
                   </div>
                 ))}
               </div>
               {(selectedRecord.ai_diagnosis || selectedRecord.ai_recommendation || selectedRecord.ai_prediction || selectedRecord.ai_identification || selectedRecord.ai_analysis) && (
-                <div className="mt-3">
-                  <AIOutput data={{ analysis: selectedRecord.ai_diagnosis || selectedRecord.ai_recommendation || selectedRecord.ai_prediction || selectedRecord.ai_identification || selectedRecord.ai_analysis, timestamp: selectedRecord.updated_at || selectedRecord.created_at }} title="AI Analysis Results" />
+                <div className="mt-3"><p>Stored native analysis. Metadata edits do not regenerate it; review the original submitted inputs and provider receipt in AI Results History.</p>
+                  <AIOutput data={{ analysis: selectedRecord.ai_diagnosis || selectedRecord.ai_recommendation || selectedRecord.ai_prediction || selectedRecord.ai_identification || selectedRecord.ai_analysis, timestamp: undefined }} title="AI Analysis Results" />
                 </div>
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setShowDetail(false)}>Close</button>
+              <button className="btn btn-ghost" onClick={() => setShowDetail(false)}>Cancel</button>
               <button className="btn btn-outline" onClick={() => handleEdit(selectedRecord)}>Edit</button>
               <button className="btn btn-danger" onClick={() => handleDelete(selectedRecord.id)}>Delete</button>
             </div>

@@ -17,14 +17,14 @@ function handleValidation(req, res) {
 async function logAIResult(userId, feature, aiResult, entityType, entityId) {
   try {
     await pool.query(
-      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, submitted_input)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [userId, feature, aiResult.model, JSON.stringify(aiResult.raw_json || {}),
        aiResult.raw_json ? JSON.stringify(aiResult.raw_json) : null,
-       aiResult.efficiency_score || null, aiResult.usage?.total_tokens || null,
-       aiResult.success !== false, aiResult.error || null, entityType, entityId]
+       aiResult.efficiency_score ?? null, aiResult.usage?.total_tokens ?? null,
+       aiResult.success !== false, aiResult.error || null, entityType, entityId, aiResult.providerReceipt || require('../lib/nativeExecution').current()?.providerReceipt || null, require('../lib/nativeExecution').current()?.req.body || null]
     );
-  } catch (e) { console.warn('Failed to log AI result:', e.message); }
+  } catch (e) { throw e; }
 }
 
 // Get all irrigation records
@@ -99,6 +99,7 @@ router.post('/',
         field_name, crop_type, field_size, field_size_unit, soil_type,
         current_moisture, target_moisture, weather_condition, temperature, humidity, last_irrigation
       });
+      if (aiResult.success === false) return res.status(503).json({ error: 'AI analysis is unavailable. No generated report or new record was saved. Retry after checking the configured provider.' });
 
       const result = await pool.query(
         `INSERT INTO irrigation_records
@@ -112,8 +113,8 @@ router.post('/',
           soil_type, current_moisture, target_moisture, weather_condition, temperature, humidity,
           aiResult.recommendation,
           last_irrigation || null,
-          aiResult.efficiency_score || null,
-          aiResult.water_needed_gallons || null,
+          aiResult.efficiency_score ?? null,
+          aiResult.water_needed_gallons ?? null,
           aiResult.next_irrigation_date || null,
           aiResult.irrigation_schedule || null
         ]

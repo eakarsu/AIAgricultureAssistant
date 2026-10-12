@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Polygon, Popup, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import { api } from '../contexts/AuthContext';
@@ -26,20 +26,8 @@ export default function FieldMap() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
-    api.get('/custom-views/fields-geo')
-      .then((res) => {
-        if (!mounted) return;
-        setFields(res.data.records || []);
-      })
-      .catch((e) => {
-        if (!mounted) return;
-        setError(e.response?.data?.error || e.message || 'Failed to load fields');
-      })
-      .finally(() => mounted && setLoading(false));
-    return () => { mounted = false; };
-  }, []);
+  const load=useCallback(async()=>{setLoading(true);setError('');try{const result=await api.get('/custom-views/fields-geo');if(!Array.isArray(result.data.records))throw Error('Native field map data has an unexpected response.');setFields(result.data.records);}catch(error){setError(error.response?.data?.error||error.message||'Field map data is unavailable. Retry.');}finally{setLoading(false);}},[]);
+  useEffect(()=>{load();},[load]);
 
   const center = fields.length
     ? fields[0].center
@@ -62,7 +50,7 @@ export default function FieldMap() {
       </div>
 
       {loading && <div style={{ padding: 16 }}>Loading map...</div>}
-      {error && <div style={{ padding: 16, color: '#c62828' }}>Error: {error}</div>}
+      {error && <div role="alert" style={{ padding: 16, color: '#c62828' }}>Error: {error}<button type="button" onClick={load}>Retry</button></div>}<p>Boundaries are illustrative squares around saved centers, not surveyed polygons. No soil moisture measurement is inferred from a soil type. Labeled training fields are fictional.</p>
       {!loading && !error && fields.length === 0 && (
         <div style={{ padding: 16 }}>No field locations on record. Add fields under the Fields page first.</div>
       )}
@@ -101,7 +89,7 @@ export default function FieldMap() {
                       Crop: {f.crop_type || '—'}<br />
                       Soil: {f.soil_type || '—'}<br />
                       Area: {f.area_size ? `${f.area_size} ${f.area_unit}` : '—'}<br />
-                      Soil moisture: {(f.soil_moisture * 100).toFixed(0)}%
+                      Soil moisture: {f.soil_moisture==null?'Not supplied':(f.soil_moisture*100).toFixed(0)+'%'}<br />{f.boundary_source}
                     </div>
                   </Popup>
                 </Polygon>

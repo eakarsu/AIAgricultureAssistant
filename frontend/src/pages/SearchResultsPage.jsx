@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,13 +9,10 @@ export default function SearchResultsPage() {
   const query = searchParams.get('q') || '';
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error,setError]=useState('');
 
-  useEffect(() => {
-    if (query) {
-      setLoading(true);
-      api.get(`/search?q=${encodeURIComponent(query)}`).then(res => setResults(res.data.results)).catch(console.error).finally(() => setLoading(false));
-    }
-  }, [query, api]);
+  const load=useCallback(async()=>{setError('');if(!query){setLoading(false);setResults(null);return;}setLoading(true);try{const res=await api.get(`/search?q=${encodeURIComponent(query)}`);if(!res.data?.results||['crop_diseases','irrigation','harvest','pests','soil'].some(key=>!Array.isArray(res.data.results[key])))throw Error('Native search results have an unexpected response.');setResults(res.data.results);}catch(error){setError(error.response?.data?.error||error.message||'Search is unavailable. Retry.');}finally{setLoading(false);}},[query,api]);
+  useEffect(()=>{load();},[load]);
 
   const typeConfig = {
     crop_diseases: { icon: '🔬', label: 'Crop Diseases', path: '/crop-diseases' },
@@ -29,6 +26,7 @@ export default function SearchResultsPage() {
     <div>
       <button className="back-btn" onClick={() => navigate('/')}>← Back to Dashboard</button>
       <div className="page-header"><div><h1 className="page-title">🔍 Search Results</h1><p className="page-description">Results for "{query}" - {results?.total || 0} matches found</p></div></div>
+      {!query&&<p>Enter a search in the native navigation to search your account records.</p>}{error&&<p role="alert">{error}<button type="button" onClick={load}>Retry</button></p>}
       {loading ? <div className="loading"><div className="loading-spinner"></div></div> :
       results && Object.entries(typeConfig).map(([key, config]) => {
         const items = results[key] || [];

@@ -59,6 +59,23 @@ app.use('/api/pests', aiLimiter);
 app.use('/api/soil', aiLimiter);
 app.use('/api/irrigation', aiLimiter);
 
+// Actual native AI writes remain atomic through provider, result, and audit persistence.
+const nativeExecution=require('./lib/nativeExecution');
+const ownExecution=nativeExecution.createExecutionMiddleware({pool,actorColumns:'id,email,role,NULL::text AS tenant_id',verifySources:async(req,user,db,lock)=>{
+ const id=req.body?.field_id;if(id===undefined||id===null||id==='')return;
+ if(!Number.isSafeInteger(Number(id))||Number(id)<=0)throw nativeExecution.failure(400,'Choose an actual accessible farm field');
+ const source=(await db.query("SELECT * FROM field_locations WHERE id=$1 AND user_id=$2 AND status='active'"+(lock?' FOR SHARE':''),[Number(id),user.id])).rows[0];
+ if(!source)throw nativeExecution.failure(404,'The selected farm field is no longer accessible. Reload actual records.');
+ req.nativeFarmField=source;
+}});
+app.use((req,res,next)=>{
+ const providerPost=req.method==='POST'&&(/^\/api\/ai\/[^/]+$/.test(req.path)||/^\/api\/(?:crop-diseases|irrigation|harvest|pests|soil)(?:\/[^/]+\/(?:analyze|reanalyze|reoptimize|repredict|reidentify|optimize|predict|identify))?$/.test(req.path)||req.path==='/api/report-workspace/run');
+ const reportDelete=req.method==='DELETE'&&/^\/api\/report-workspace\/runs\/[^/]+$/.test(req.path);
+ const draftWrite=(req.method==='POST'&&req.path==='/api/operations/drafts')||(['PUT','DELETE'].includes(req.method)&&/^\/api\/operations\/plans\/\d+\/draft$/.test(req.path));
+ const calendarWrite=['POST','PUT','DELETE'].includes(req.method)&&/^\/api\/custom-views\/irrigation-schedules(?:\/\d+)?$/.test(req.path);
+ return providerPost||reportDelete||draftWrite||calendarWrite?ownExecution(req,res,next):next();
+});
+
 // Ensure logs directory exists
 const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) {
@@ -66,7 +83,7 @@ if (!fs.existsSync(logsDir)) {
 }
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads',require('./middleware/auth').authMiddleware,async(req,res,next)=>{try{const filename=path.basename(req.path);const owned=(await pool.query('SELECT id FROM uploaded_files WHERE filename=$1 AND user_id=$2',[filename,req.user.id])).rows[0];if(!owned)return res.status(404).json({error:'File not found'});next();}catch(error){res.status(503).json({error:'The actual file could not be loaded. Retry.'});}},express.static(path.join(__dirname,'../uploads')));
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -188,6 +205,14 @@ if (process.env.NODE_ENV === 'production') {
 app.use(errorHandler);
 
 // 404 handler
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
+const aiWorkspaceDatabase = require("./config/database.js");
+app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js").authMiddleware,
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),
+}));
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });

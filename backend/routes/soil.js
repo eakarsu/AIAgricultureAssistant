@@ -17,20 +17,20 @@ function handleValidation(req, res) {
 async function logAIResult(userId, feature, aiResult, entityType, entityId) {
   try {
     await pool.query(
-      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, submitted_input)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         userId, feature, aiResult.model,
         JSON.stringify(aiResult.raw_json || {}),
         aiResult.raw_json ? JSON.stringify(aiResult.raw_json) : null,
-        aiResult.health_score || null,
-        aiResult.usage?.total_tokens || null,
+        aiResult.health_score ?? null,
+        aiResult.usage?.total_tokens ?? null,
         aiResult.success !== false,
         aiResult.error || null,
-        entityType, entityId
+        entityType, entityId, aiResult.providerReceipt || require('../lib/nativeExecution').current()?.providerReceipt || null, require('../lib/nativeExecution').current()?.req.body || null
       ]
     );
-  } catch (e) { console.warn('Failed to log AI result:', e.message); }
+  } catch (e) { throw e; }
 }
 
 // Get all soil analyses (supports ?page=1&limit=20)
@@ -115,6 +115,7 @@ router.post('/',
         phosphorus_level, potassium_level, organic_matter,
         soil_texture, moisture_content, electrical_conductivity
       });
+      if (aiResult.success === false) return res.status(503).json({ error: 'AI analysis is unavailable. No generated report or new record was saved. Retry after checking the configured provider.' });
 
       // Serialize array fields for DB storage
       const suitableCropsText = Array.isArray(aiResult.suitable_crops)
@@ -132,12 +133,12 @@ router.post('/',
         [
           req.user.id, field_name, sample_location || null,
           sample_date || new Date(),
-          ph_level || null, nitrogen_level || null,
-          phosphorus_level || null, potassium_level || null,
-          organic_matter || null, soil_texture || null,
-          moisture_content || null, electrical_conductivity || null,
+          ph_level ?? null, nitrogen_level ?? null,
+          phosphorus_level ?? null, potassium_level ?? null,
+          organic_matter ?? null, soil_texture || null,
+          moisture_content ?? null, electrical_conductivity ?? null,
           aiResult.analysis,
-          aiResult.success ? (aiResult.health_score || 70) : 0,
+          aiResult.success ? (aiResult.health_score ?? null) : 0,
           aiResult.recommendations || null,
           suitableCropsText,
           aiResult.fertilizer_recommendations || null
@@ -258,7 +259,7 @@ router.post('/:id/analyze', authMiddleware, async (req, res) => {
        RETURNING *`,
       [
         aiResult.analysis,
-        aiResult.health_score || null,
+        aiResult.health_score ?? null,
         aiResult.recommendations || null,
         suitableCropsText,
         aiResult.fertilizer_recommendations || null,

@@ -36,7 +36,7 @@ router.use(authMiddleware);
 router.get('/fields-geo', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, latitude, longitude, area_size, area_unit, crop_type, soil_type, color
+      `SELECT id, name, latitude, longitude, area_size, area_unit, crop_type, soil_type, color, to_jsonb(field_locations)->>'is_demo' AS is_demo
        FROM field_locations
        WHERE user_id = $1 AND status = 'active'
        ORDER BY created_at DESC
@@ -78,7 +78,9 @@ router.get('/fields-geo', async (req, res) => {
         area_size: r.area_size,
         area_unit: r.area_unit,
         color,
-        soil_moisture: soilMoisture,
+        soil_moisture: null,
+        is_demo: r.is_demo === 'true',
+        boundary_source: 'Illustrative square around saved center, not a surveyed boundary',
         center: [lat, lng],
         polygon: ring
       };
@@ -102,7 +104,7 @@ router.get('/yield-trends', async (req, res) => {
       `SELECT field_name, crop_type, predicted_yield, yield_unit,
               COALESCE(expected_harvest_date, planting_date, created_at) AS season_date
        FROM harvest_predictions
-       WHERE user_id = $1 AND status != 'deleted'
+       WHERE user_id = $1 AND status != 'deleted' AND predicted_yield IS NOT NULL
        ORDER BY season_date ASC`,
       [req.user.id]
     );
@@ -253,6 +255,8 @@ router.post('/planting-plan-pdf', async (req, res) => {
 // POST /api/custom-views/irrigation-schedules — IrrigationScheduler
 // Body: { zone, start_time, duration_minutes, recurrence }
 // -------------------------------------------------------------------
+const nativeSchedule = row => ({...row,start_time:row.start_instant||row.start_time});
+
 router.post('/irrigation-schedules', async (req, res) => {
   try {
     const { zone, start_time, duration_minutes, recurrence } = req.body || {};
@@ -269,12 +273,12 @@ router.post('/irrigation-schedules', async (req, res) => {
     if (isNaN(startDate.getTime())) return res.status(400).json({ error: 'start_time must be a valid datetime' });
 
     const inserted = await pool.query(
-      `INSERT INTO irrigation_schedules (user_id, zone, start_time, duration_minutes, recurrence)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [req.user.id, String(zone).trim(), startDate, dur, rec]
+      `INSERT INTO irrigation_schedules (user_id, zone, start_time, duration_minutes, recurrence, status, start_instant)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [req.user.id, String(zone).trim(), startDate, dur, rec, req.body.planning_only===true?'draft':'scheduled',startDate.toISOString()]
     );
 
-    res.status(201).json({ record: inserted.rows[0] });
+    res.status(201).json({ record: nativeSchedule(inserted.rows[0]) });
   } catch (err) {
     console.error('[customViews] irrigation-schedules error', err);
     res.status(500).json({ error: 'Server error' });
@@ -287,11 +291,14 @@ router.get('/irrigation-schedules', async (req, res) => {
       `SELECT * FROM irrigation_schedules WHERE user_id = $1 ORDER BY start_time DESC LIMIT 200`,
       [req.user.id]
     );
-    res.json({ records: rs.rows });
+    res.json({ records: rs.rows.map(nativeSchedule) });
   } catch (err) {
     console.error('[customViews] list irrigation-schedules error', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
+router.get('/irrigation-schedules/:id',async(req,res)=>{try{const row=(await pool.query('SELECT * FROM irrigation_schedules WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Schedule not found'});res.json({record:nativeSchedule(row),canEdit:row.status==='draft',canDelete:row.status==='draft'});}catch(error){res.status(503).json({error:'Native calendar details are unavailable. Retry.'});}});
+router.put('/irrigation-schedules/:id',async(req,res)=>{const body=req.body||{},allowed=['zone','start_time','duration_minutes','recurrence'];if(Object.keys(body).some(key=>!allowed.includes(key)))return res.status(400).json({error:'Only draft calendar fields can be edited; authority and status are retained.'});const date=new Date(body.start_time),duration=Number(body.duration_minutes);if(typeof body.zone!=='string'||!body.zone.trim()||!Number.isFinite(date.getTime())||!Number.isInteger(duration)||duration<1||duration>1440||!['once','daily','weekly','biweekly','monthly'].includes(body.recurrence))return res.status(400).json({error:'Provide all valid native calendar draft fields.'});try{const row=(await pool.query("UPDATE irrigation_schedules SET zone=$1,start_time=$2,start_instant=$7,duration_minutes=$3,recurrence=$4 WHERE id=$5 AND user_id=$6 AND status='draft' RETURNING *",[body.zone.trim(),date,duration,body.recurrence,req.params.id,req.user.id,date.toISOString()])).rows[0];if(!row)return res.status(404).json({error:'An owned planning draft is required; operational records are retained.'});res.json({record:nativeSchedule(row)});}catch(error){res.status(503).json({error:'Native calendar draft could not be saved. Retry.'});}});
+router.delete('/irrigation-schedules/:id',async(req,res)=>{try{const row=(await pool.query("DELETE FROM irrigation_schedules WHERE id=$1 AND user_id=$2 AND status='draft' RETURNING id",[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'An owned planning draft is required; operational records are retained.'});res.json({deleted:true});}catch(error){res.status(503).json({error:'Native calendar draft could not be deleted. Retry.'});}});
 module.exports = router;

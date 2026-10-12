@@ -73,8 +73,11 @@ fi
 : "${FRONTEND_PORT:?FRONTEND_PORT is required}"
 [[ "$BACKEND_PORT" != "$FRONTEND_PORT" ]] || { echo "BACKEND_PORT and FRONTEND_PORT must differ." >&2; exit 1; }
 for port in "$BACKEND_PORT" "$FRONTEND_PORT"; do
-  if command -v lsof >/dev/null && lsof -ti ":$port" >/dev/null 2>&1; then echo "Port $port is in use; stop that process explicitly." >&2; exit 1; fi
+  if command -v lsof >/dev/null && lsof -nP -tiTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then echo "Port $port is in use; stop that process explicitly." >&2; exit 1; fi
 done
+
+# Apply the native additive receipt schema; this never provisions or resets an account.
+node backend/scripts/setup-native-runtime.js
 
 PORT="$BACKEND_PORT" node backend/server.js &
 BACKEND_PID=$!

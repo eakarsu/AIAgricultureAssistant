@@ -1,3 +1,8 @@
+import useFarmFields from '../components/useFarmFields';
+import FarmFieldAvailability from '../components/FarmFieldAvailability';
+import NativeAIControls from "../components/NativeAIControls";
+import useNativeAIRequest from "../components/useNativeAIRequest";
+import FormattedAIReport from "../components/FormattedAIReport";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +13,10 @@ import { useAuth } from '../contexts/AuthContext';
  * (lime, gypsum, NPK, micronutrients), pH plan, cover crop suggestions, monitoring plan.
  */
 export default function SoilAmendmentPage() {
+  const nativeAIRequest = useNativeAIRequest();
+
   const { api } = useAuth();
+  const { fields, fieldsLoading, fieldsError, loadFields } = useFarmFields(api);
   const navigate = useNavigate();
   const [form, setForm] = useState({
     field_id: '',
@@ -19,6 +27,18 @@ export default function SoilAmendmentPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  const scenarios = [
+    { name: 'Acidic soil planning', crop_type: 'Maize', target_yield: 'Planning only; 100 units per area, unverified', soil_data: 'Fictional planning soil sample: pH 5.4, organic matter 1.8%, phosphorus 12 ppm and potassium 95 ppm. This is not an actual laboratory result; require qualified review before treatment.' },
+    { name: 'Balanced soil planning', crop_type: 'Wheat', target_yield: 'Planning only; 80 units per area, unverified', soil_data: 'Fictional planning soil sample: pH 6.2, organic matter 2.8%, phosphorus 22 ppm and potassium 180 ppm. No verified sample or chemical application approval is supplied.' },
+    { name: 'Zero-value boundary', crop_type: 'Beans', target_yield: 'Planning boundary; zero yield is an assumption', soil_data: 'Fictional planning soil sample: pH 7.0 and zero values for nitrogen, phosphorus and potassium as a boundary example. These are not measured observations; verify actual sources.' },
+  ];
+  const presets = scenarios.map(scenario => ({ name: scenario.name, fill: () => {
+    const preserve = (key, value) => form[key] && !scenarios.some(example => example[key] === form[key]) ? form[key] : value;
+    const field = form.field_id || String(fields[0]?.id || '');
+    setForm({ field_id: field, crop_type: preserve('crop_type', scenario.crop_type), target_yield: preserve('target_yield', scenario.target_yield), soil_data: preserve('soil_data', scenario.soil_data) });
+    return { filled: field ? 4 : 3, manual: field ? [] : ['accessible optional farm field; no field ID will be invented'] };
+  } }));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -32,7 +52,7 @@ export default function SoilAmendmentPage() {
     try {
       const payload = {};
       Object.entries(form).forEach(([k, v]) => { if (v !== '') payload[k] = v; });
-      const res = await api.post('/ai/soil-amendment', payload);
+      const res = await nativeAIRequest.run((signal) => api.post('/ai/soil-amendment', payload, { signal }));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Analysis failed');
@@ -51,7 +71,7 @@ export default function SoilAmendmentPage() {
   const ai = result?.result || result?.ai_result || result;
 
   return (
-    <div>
+    <NativeAIControls busy={nativeAIRequest.busy} onCancel={nativeAIRequest.cancel} context="Agriculture Assistant" presets={presets}><div>
       <button className="back-btn" onClick={() => navigate('/')}>← Back to Dashboard</button>
       <div className="page-header">
         <div>
@@ -60,24 +80,25 @@ export default function SoilAmendmentPage() {
         </div>
       </div>
 
+      <FarmFieldAvailability fields={fields} fieldsLoading={fieldsLoading} fieldsError={fieldsError} loadFields={loadFields} optional />
       <form onSubmit={submit} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="form-group">
             <label>Crop Type</label>
-            <input type="text" value={form.crop_type} onChange={e => setForm({ ...form, crop_type: e.target.value })} placeholder="e.g. Corn, Wheat, Tomato" />
+            <input data-ai-field="crop_type" type="text" value={form.crop_type} onChange={e => setForm({ ...form, crop_type: e.target.value })} placeholder="e.g. Corn, Wheat, Tomato" />
           </div>
           <div className="form-group">
             <label>Target Yield</label>
-            <input type="text" value={form.target_yield} onChange={e => setForm({ ...form, target_yield: e.target.value })} placeholder="e.g. 200 bu/ac" />
+            <input data-ai-field="target_yield" type="text" value={form.target_yield} onChange={e => setForm({ ...form, target_yield: e.target.value })} placeholder="e.g. 200 bu/ac" />
           </div>
           <div className="form-group">
             <label>Field ID (optional)</label>
-            <input type="text" value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} placeholder="optional field reference" />
+            <select data-ai-field="field_id" value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} disabled={fieldsLoading || loading}><option value="">No field context</option>{fields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}</select>
           </div>
         </div>
         <div className="form-group" style={{ marginTop: 12 }}>
           <label>Soil Test Data (paste text or JSON) *</label>
-          <textarea
+          <textarea data-ai-field="soil_data"
             rows={10}
             value={form.soil_data}
             onChange={e => setForm({ ...form, soil_data: e.target.value })}
@@ -85,7 +106,7 @@ export default function SoilAmendmentPage() {
             style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'monospace' }}
           />
         </div>
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
+        <button type="submit" className="btn btn-primary" disabled={loading || Boolean(fieldsError && form.field_id)} style={{ marginTop: 12 }}>
           {loading ? 'Analyzing...' : 'Get Amendment Recommendations'}
         </button>
       </form>
@@ -141,13 +162,11 @@ export default function SoilAmendmentPage() {
           )}
 
           <details style={{ background: 'var(--bg-card)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
-            <summary style={{ cursor: 'pointer' }}>Full JSON response</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 12 }}>
-              {JSON.stringify(result, null, 2)}
-            </pre>
+            <summary style={{ cursor: 'pointer' }}>Complete report</summary>
+            <FormattedAIReport response={result} />
           </details>
         </div>
       )}
-    </div>
+    </div></NativeAIControls>
   );
 }

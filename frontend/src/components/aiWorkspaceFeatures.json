@@ -1,0 +1,302 @@
+[
+  {
+    "name": "AiDiseaseIdentificationLeafPlantPage",
+    "id": "gap-ai-disease-identification-leaf-plant",
+    "title": "No AI disease identification from leaf / plant photos",
+    "description": "Prepare a professional advisory report for no ai disease identification from leaf / plant photos using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No AI disease identification from leaf / plant photos for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No AI disease identification from leaf / plant photos data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No AI disease identification from leaf / plant photos.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "AiIrrigationOptimizationRealTimePage",
+    "id": "gap-ai-irrigation-optimization-real-time",
+    "title": "No AI irrigation optimization (real-time water scheduling)",
+    "description": "Prepare a professional advisory report for no ai irrigation optimization (real-time water scheduling) using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No AI irrigation optimization (real-time water scheduling) for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No AI irrigation optimization (real-time water scheduling) data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No AI irrigation optimization (real-time water scheduling).\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "AiMarketPricePredictionOptimalPage",
+    "id": "gap-ai-market-price-prediction-optimal",
+    "title": "No AI market-price prediction for optimal sell timing",
+    "description": "Prepare a professional advisory report for no ai market-price prediction for optimal sell timing using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No AI market-price prediction for optimal sell timing for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No AI market-price prediction for optimal sell timing data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No AI market-price prediction for optimal sell timing.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "AiSoilAmendmentRecommendationPage",
+    "id": "gap-ai-soil-amendment-recommendation",
+    "title": "No AI soil-amendment recommendation",
+    "description": "Prepare a professional advisory report for no ai soil-amendment recommendation using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No AI soil-amendment recommendation for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No AI soil-amendment recommendation data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No AI soil-amendment recommendation.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "AiWeatherBasedRiskAlertsPage",
+    "id": "gap-ai-weather-based-risk-alerts",
+    "title": "No AI weather-based risk alerts (hail, frost, drought)",
+    "description": "Prepare a professional advisory report for no ai weather-based risk alerts (hail, frost, drought) using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No AI weather-based risk alerts (hail, frost, drought) for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No AI weather-based risk alerts (hail, frost, drought) data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No AI weather-based risk alerts (hail, frost, drought).\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "DroneImageryAnalysisPipelinePage",
+    "id": "gap-drone-imagery-analysis-pipeline",
+    "title": "No drone-imagery analysis pipeline",
+    "description": "Prepare a professional advisory report for no drone-imagery analysis pipeline using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No drone-imagery analysis pipeline for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No drone-imagery analysis pipeline data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No drone-imagery analysis pipeline.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "EquipmentTractorMaintenanceTrackingPage",
+    "id": "gap-equipment-tractor-maintenance-tracking",
+    "title": "No equipment / tractor maintenance tracking",
+    "description": "Prepare a professional advisory report for no equipment / tractor maintenance tracking using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No equipment / tractor maintenance tracking for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No equipment / tractor maintenance tracking data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No equipment / tractor maintenance tracking.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "HyperspectralMultispectralDroneSatelliteImageryPage",
+    "id": "cf-hyperspectral-multispectral-drone-satellite-imagery",
+    "title": "Hyperspectral / multispectral drone-and-satellite imagery analysis for crop stress, disease, and weeds",
+    "description": "Prepare a professional advisory report for hyperspectral / multispectral drone-and-satellite imagery analysis for crop stress, disease, and weeds using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run Hyperspectral / multispectral drone-and-satellite imagery analysis for crop stress, disease, and weeds for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this Hyperspectral / multispectral drone-and-satellite imagery analysis for crop stress, disease, and weeds data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for Hyperspectral / multispectral drone-and-satellite imagery analysis for crop stress, disease, and weeds.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "IotConnectivityPhytosIndigoAgPage",
+    "id": "cf-iot-connectivity-phytos-indigo-ag",
+    "title": "IoT connectivity (Phytos, Indigo Ag, John Deere)",
+    "description": "Prepare a professional advisory report for iot connectivity (phytos, indigo ag, john deere) using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run IoT connectivity (Phytos, Indigo Ag, John Deere) for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this IoT connectivity (Phytos, Indigo Ag, John Deere) data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for IoT connectivity (Phytos, Indigo Ag, John Deere).\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "IotSensorIngestionMoistureNpkPage",
+    "id": "gap-iot-sensor-ingestion-moisture-npk",
+    "title": "No IoT sensor ingestion (moisture, NPK, pH)",
+    "description": "Prepare a professional advisory report for no iot sensor ingestion (moisture, npk, ph) using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No IoT sensor ingestion (moisture, NPK, pH) for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No IoT sensor ingestion (moisture, NPK, pH) data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No IoT sensor ingestion (moisture, NPK, pH).\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "LimitedMultiFarmAgribusinessRollupPage",
+    "id": "gap-limited-multi-farm-agribusiness-rollup",
+    "title": "Limited multi-farm / agribusiness rollup support",
+    "description": "Prepare a professional advisory report for limited multi-farm / agribusiness rollup support using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run Limited multi-farm / agribusiness rollup support for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this Limited multi-farm / agribusiness rollup support data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for Limited multi-farm / agribusiness rollup support.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "MarketplaceBridgeGrainElevatorsCommodityPage",
+    "id": "cf-marketplace-bridge-grain-elevators-commodity",
+    "title": "Marketplace bridge to grain elevators and commodity markets for sell-timing optimization",
+    "description": "Prepare a professional advisory report for marketplace bridge to grain elevators and commodity markets for sell-timing optimization using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run Marketplace bridge to grain elevators and commodity markets for sell-timing optimization for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this Marketplace bridge to grain elevators and commodity markets for sell-timing optimization data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for Marketplace bridge to grain elevators and commodity markets for sell-timing optimization.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "OutboundWebhooksPage",
+    "id": "gap-outbound-webhooks",
+    "title": "No outbound webhooks",
+    "description": "Prepare a professional advisory report for no outbound webhooks using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run No outbound webhooks for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this No outbound webhooks data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for No outbound webhooks.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "PredictiveIrrigationSchedulingFusingWeatherPage",
+    "id": "cf-predictive-irrigation-scheduling-fusing-weather",
+    "title": "Predictive irrigation scheduling fusing weather, soil moisture, and crop stage",
+    "description": "Prepare a professional advisory report for predictive irrigation scheduling fusing weather, soil moisture, and crop stage using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run Predictive irrigation scheduling fusing weather, soil moisture, and crop stage for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this Predictive irrigation scheduling fusing weather, soil moisture, and crop stage data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for Predictive irrigation scheduling fusing weather, soil moisture, and crop stage.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  },
+  {
+    "name": "SustainabilityScoringCarbonCreditsWaterPage",
+    "id": "cf-sustainability-scoring-carbon-credits-water",
+    "title": "Sustainability scoring (carbon credits, water usage, biodiversity)",
+    "description": "Prepare a professional advisory report for sustainability scoring (carbon credits, water usage, biodiversity) using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": [
+      {
+        "label": "Scenario",
+        "value": "Run Sustainability scoring (carbon credits, water usage, biodiversity) for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+        "label": "Data sample",
+        "value": "Analyze this Sustainability scoring (carbon credits, water usage, biodiversity) data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+        "label": "Executive review",
+        "value": "Prepare an executive review for Sustainability scoring (carbon credits, water usage, biodiversity).\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+    ]
+  }
+]

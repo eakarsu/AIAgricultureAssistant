@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import useFarmFields from '../components/useFarmFields';
+import FarmFieldAvailability from '../components/FarmFieldAvailability';
+import NativeAIControls from "../components/NativeAIControls.jsx";
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const SEASONS = ['Spring 2026', 'Summer 2026', 'Fall 2026', 'Winter 2026'];
 
 export default function YieldPredictionPage() {
   const { api } = useAuth();
-  const [fields, setFields] = useState([]);
+  const { fields, fieldsLoading, fieldsError, loadFields } = useFarmFields(api);
   const [form, setForm] = useState({ field_id: '', crop_type: '', season: SEASONS[0] });
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.get('/fields').then(res => setFields(res.data.records || res.data || [])).catch(() => {});
-  }, [api]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -22,7 +23,7 @@ export default function YieldPredictionPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await api.post('/ai/yield-prediction', form);
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/yield-prediction',form,{signal}));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Prediction failed');
@@ -34,7 +35,7 @@ export default function YieldPredictionPage() {
   const a = result?.analysis || {};
 
   return (
-    <div className="page">
+    <NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant"><div className="page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Yield Prediction Model</h1>
@@ -42,29 +43,30 @@ export default function YieldPredictionPage() {
         </div>
       </div>
 
+      <FarmFieldAvailability fields={fields} fieldsLoading={fieldsLoading} fieldsError={fieldsError} loadFields={loadFields} />
       <form onSubmit={submit} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <div className="form-group">
             <label>Field</label>
-            <select value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} required>
+            <select data-ai-field={"field_id"} value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} required>
               <option value="">-- Select --</option>
               {fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
           <div className="form-group">
             <label>Crop Type</label>
-            <input type="text" value={form.crop_type} onChange={e => setForm({ ...form, crop_type: e.target.value })}
+            <input data-ai-field={"crop_type"} type="text" value={form.crop_type} onChange={e => setForm({ ...form, crop_type: e.target.value })}
               placeholder="e.g. Corn, Soybean" required />
           </div>
           <div className="form-group">
             <label>Season</label>
-            <select value={form.season} onChange={e => setForm({ ...form, season: e.target.value })}>
+            <select data-ai-field={"season"} value={form.season} onChange={e => setForm({ ...form, season: e.target.value })}>
               {SEASONS.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
         </div>
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
-          {loading ? 'Predicting...' : 'Predict Yield'}
+        <button type="submit" className="btn btn-primary" disabled={loading || fieldsLoading || Boolean(fieldsError) || !fields.some(field => String(field.id) === String(form.field_id))} style={{ marginTop: 12 }}>
+          {loading ? 'Predicting...' : 'Generate with OpenRouter'}
         </button>
       </form>
 
@@ -110,6 +112,6 @@ export default function YieldPredictionPage() {
           )}
         </div>
       )}
-    </div>
+    </div></NativeAIControls>
   );
 }

@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import AIReport from '../components/AIReport';
+import NativeAIControls from "../components/NativeAIControls.jsx";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,17 +10,22 @@ export default function FarmChatPage() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState('');
   const bottomRef = useRef(null);
 
-  useEffect(() => {
-    api.get('/ai/farm-chat/history?limit=10')
-      .then(res => setHistory(res.data.records || []))
-      .catch(() => {})
-      .finally(() => setHistoryLoading(false));
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true); setHistoryError('');
+    try {
+      const res = await api.get('/ai/farm-chat/history?limit=100');
+      if (!Array.isArray(res.data?.records)) throw new Error('Chat history has an unexpected response. Retry.');
+      setHistory(res.data.records);
+    } catch (error) { setHistoryError(error.response?.data?.error || error.message); }
+    finally { setHistoryLoading(false); }
   }, [api]);
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,7 +41,7 @@ export default function FarmChatPage() {
     setLoading(true);
 
     try {
-      const res = await api.post('/ai/farm-chat', { message: userMessage });
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/farm-chat',{ message: userMessage },{signal}));
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: res.data.answer,
@@ -42,7 +50,9 @@ export default function FarmChatPage() {
         confidence: res.data.confidence,
         sources: res.data.sources_to_verify || []
       }]);
+      loadHistory();
     } catch (err) {
+      if (err.name === 'AbortError') return;
       setMessages(prev => [...prev, { role: 'error', content: err.response?.data?.error || 'Failed to get response. Please try again.' }]);
     } finally {
       setLoading(false);
@@ -62,7 +72,7 @@ export default function FarmChatPage() {
   ];
 
   return (
-    <div>
+    <NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant"><div>
       <button className="back-btn" onClick={() => navigate('/')}>← Back to Dashboard</button>
       <div className="page-header">
         <div>
@@ -105,7 +115,7 @@ export default function FarmChatPage() {
                     <div style={{ width: 36, height: 36, background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.2rem' }}>🤖</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '12px 16px', borderRadius: '4px 18px 18px 18px' }}>
-                        <p style={{ marginBottom: msg.key_points?.length > 0 ? 12 : 0 }}>{msg.content}</p>
+                        <AIReport response={msg.content} title="Farm chat response"/>
                         {msg.key_points?.length > 0 && (
                           <div style={{ marginTop: 12 }}>
                             <strong style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>KEY POINTS</strong>
@@ -155,7 +165,7 @@ export default function FarmChatPage() {
 
           {/* Input */}
           <form onSubmit={sendMessage} style={{ display: 'flex', gap: 12 }}>
-            <input
+            <input data-ai-field={"input"}
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -165,7 +175,7 @@ export default function FarmChatPage() {
               disabled={loading}
             />
             <button type="submit" className="btn btn-primary" disabled={loading || !input.trim()}>
-              Send
+              Generate with OpenRouter
             </button>
           </form>
         </div>
@@ -175,7 +185,7 @@ export default function FarmChatPage() {
           <h3 style={{ marginBottom: 12 }}>Recent Questions</h3>
           {historyLoading ? (
             <div className="loading"><div className="loading-spinner"></div></div>
-          ) : history.length === 0 ? (
+          ) : historyError ? (<p role="alert">{historyError}<button type="button" onClick={loadHistory}>Retry history</button></p>) : history.length === 0 ? (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No chat history yet.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -196,6 +206,6 @@ export default function FarmChatPage() {
           )}
         </div>
       </div>
-    </div>
+    </div></NativeAIControls>
   );
 }

@@ -1,29 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ diseases: 0, irrigation: 0, harvest: 0, pests: 0, soil: 0 });
+  const [stats, setStats] = useState({ diseases: '…', irrigation: '…', harvest: '…', pests: '…', soil: '…' });
+  const [loadError,setLoadError]=useState('');
   const { api } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [diseases, irrigation, harvest, pests, soil] = await Promise.all([
-          api.get('/crop-diseases'), api.get('/irrigation'), api.get('/harvest'), api.get('/pests'), api.get('/soil')
-        ]);
-        setStats({
-          diseases: diseases.data.pagination?.total ?? diseases.data.records?.length ?? 0,
-          irrigation: irrigation.data.pagination?.total ?? irrigation.data.records?.length ?? 0,
-          harvest: harvest.data.pagination?.total ?? harvest.data.records?.length ?? 0,
-          pests: pests.data.pagination?.total ?? pests.data.records?.length ?? 0,
-          soil: soil.data.pagination?.total ?? soil.data.records?.length ?? 0
-        });
-      } catch (err) { console.error('Failed to fetch stats:', err); }
-    };
-    fetchStats();
-  }, [api]);
+  const fetchStats=useCallback(async()=>{setLoadError('');try{const responses=await Promise.all(['/crop-diseases','/irrigation','/harvest','/pests','/soil'].map(path=>api.get(path)));const counts=responses.map(response=>{if(!Array.isArray(response.data.records)||!Number.isFinite(Number(response.data.pagination?.total)))throw Error('The native list response could not be read. Retry.');return Number(response.data.pagination.total);});setStats(Object.fromEntries(['diseases','irrigation','harvest','pests','soil'].map((key,index)=>[key,counts[index]])));}catch(error){setLoadError(error.response?.data?.error||error.message||'Native domain counts could not be loaded. Retry.');}},[api]);
+  useEffect(()=>{fetchStats();},[fetchStats]);
 
   const sections = [
     {
@@ -86,6 +72,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {loadError&&<div role="alert" className="alert alert-error">{loadError}<button type="button" onClick={fetchStats}>Retry</button></div>}
       {sections.map((section) => (
         <section key={section.title} className="dashboard-section" aria-label={section.title}>
           <h2 className="section-title">{section.title}</h2>

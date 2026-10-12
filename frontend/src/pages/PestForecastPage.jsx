@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import useFarmFields from '../components/useFarmFields';
+import FarmFieldAvailability from '../components/FarmFieldAvailability';
+import NativeAIControls from "../components/NativeAIControls.jsx";
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 
 export default function PestForecastPage() {
   const { api } = useAuth();
-  const [fields, setFields] = useState([]);
+  const { fields, fieldsLoading, fieldsError, loadFields } = useFarmFields(api);
   const [form, setForm] = useState({ field_id: '', pest_type: '', current_severity: 'medium' });
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.get('/fields').then(res => setFields(res.data.records || res.data || [])).catch(() => {});
-  }, [api]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -22,7 +23,7 @@ export default function PestForecastPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await api.post('/ai/pest-forecast', form);
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/pest-forecast',form,{signal}));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Forecast failed');
@@ -42,7 +43,7 @@ export default function PestForecastPage() {
   };
 
   return (
-    <div className="page">
+    <NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant"><div className="page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Pest Outbreak Forecasting</h1>
@@ -50,29 +51,30 @@ export default function PestForecastPage() {
         </div>
       </div>
 
+      <FarmFieldAvailability fields={fields} fieldsLoading={fieldsLoading} fieldsError={fieldsError} loadFields={loadFields} />
       <form onSubmit={submit} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <div className="form-group">
             <label>Field</label>
-            <select value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} required>
+            <select data-ai-field={"field_id"} value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} required>
               <option value="">-- Select --</option>
               {fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
           <div className="form-group">
             <label>Pest Type</label>
-            <input type="text" value={form.pest_type} onChange={e => setForm({ ...form, pest_type: e.target.value })}
+            <input data-ai-field={"pest_type"} data-ai-example="Aphids" type="text" value={form.pest_type} onChange={e => setForm({ ...form, pest_type: e.target.value })}
               placeholder="e.g. Aphids, Corn Borer" required />
           </div>
           <div className="form-group">
             <label>Current Severity</label>
-            <select value={form.current_severity} onChange={e => setForm({ ...form, current_severity: e.target.value })}>
+            <select data-ai-field={"current_severity"} value={form.current_severity} onChange={e => setForm({ ...form, current_severity: e.target.value })}>
               {SEVERITIES.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
         </div>
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
-          {loading ? 'Forecasting...' : 'Forecast Outbreak'}
+        <button type="submit" className="btn btn-primary" disabled={loading || fieldsLoading || Boolean(fieldsError) || !fields.some(field => String(field.id) === String(form.field_id))} style={{ marginTop: 12 }}>
+          {loading ? 'Forecasting...' : 'Generate with OpenRouter'}
         </button>
       </form>
 
@@ -143,6 +145,6 @@ export default function PestForecastPage() {
           )}
         </div>
       )}
-    </div>
+    </div></NativeAIControls>
   );
 }

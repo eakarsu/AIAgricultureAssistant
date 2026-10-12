@@ -1,3 +1,8 @@
+import useFarmFields from '../components/useFarmFields';
+import FarmFieldAvailability from '../components/FarmFieldAvailability';
+import NativeAIControls from "../components/NativeAIControls";
+import useNativeAIRequest from "../components/useNativeAIRequest";
+import FormattedAIReport from "../components/FormattedAIReport";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +13,10 @@ import { useAuth } from '../contexts/AuthContext';
  * (hail, frost, drought, heat, flood, wind, storm) with recommended actions.
  */
 export default function WeatherRiskAlertPage() {
+  const nativeAIRequest = useNativeAIRequest();
+
   const { api } = useAuth();
+  const { fields, fieldsLoading, fieldsError, loadFields } = useFarmFields(api);
   const navigate = useNavigate();
   const [form, setForm] = useState({
     field_id: '',
@@ -19,6 +27,18 @@ export default function WeatherRiskAlertPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  const scenarios = [
+    { name: 'Moderate weather', crop_type: 'Maize', growth_stage: 'Vegetative planning', forecast: 'Fictional planning forecast: moderate temperatures, intermittent rain and light winds. This is not a current weather feed; verify actual field observations before acting.' },
+    { name: 'Storm planning', crop_type: 'Wheat', growth_stage: 'Flowering planning', forecast: 'Fictional planning forecast: gusty winds and possible thunderstorms over three days. No actual weather observation or protective action approval is supplied.' },
+    { name: 'Dry period', crop_type: 'Beans', growth_stage: 'Pod development planning', forecast: 'Fictional planning forecast: a dry seven-day period with zero expected rain as an example assumption. Obtain the actual local forecast and qualified review before action.' },
+  ];
+  const presets = scenarios.map(scenario => ({ name: scenario.name, fill: () => {
+    const preserve = (key, value) => form[key] && !scenarios.some(example => example[key] === form[key]) ? form[key] : value;
+    const field = form.field_id || String(fields[0]?.id || '');
+    setForm({ field_id: field, crop_type: preserve('crop_type', scenario.crop_type), growth_stage: preserve('growth_stage', scenario.growth_stage), forecast: preserve('forecast', scenario.forecast) });
+    return { filled: field ? 4 : 3, manual: field ? [] : ['accessible optional farm field; no field ID will be invented'] };
+  } }));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -32,7 +52,7 @@ export default function WeatherRiskAlertPage() {
     try {
       const payload = {};
       Object.entries(form).forEach(([k, v]) => { if (v !== '') payload[k] = v; });
-      const res = await api.post('/ai/weather-risk-alert', payload);
+      const res = await nativeAIRequest.run((signal) => api.post('/ai/weather-risk-alert', payload, { signal }));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Analysis failed');
@@ -54,7 +74,7 @@ export default function WeatherRiskAlertPage() {
   const alerts = Array.isArray(ai?.alerts) ? ai.alerts : [];
 
   return (
-    <div>
+    <NativeAIControls busy={nativeAIRequest.busy} onCancel={nativeAIRequest.cancel} context="Agriculture Assistant" presets={presets}><div>
       <button className="back-btn" onClick={() => navigate('/')}>← Back to Dashboard</button>
       <div className="page-header">
         <div>
@@ -63,24 +83,25 @@ export default function WeatherRiskAlertPage() {
         </div>
       </div>
 
+      <FarmFieldAvailability fields={fields} fieldsLoading={fieldsLoading} fieldsError={fieldsError} loadFields={loadFields} optional />
       <form onSubmit={submit} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="form-group">
             <label>Crop Type</label>
-            <input type="text" value={form.crop_type} onChange={e => setForm({ ...form, crop_type: e.target.value })} placeholder="e.g. Corn, Wheat, Tomato" />
+            <input data-ai-field="crop_type" type="text" value={form.crop_type} onChange={e => setForm({ ...form, crop_type: e.target.value })} placeholder="e.g. Corn, Wheat, Tomato" />
           </div>
           <div className="form-group">
             <label>Growth Stage</label>
-            <input type="text" value={form.growth_stage} onChange={e => setForm({ ...form, growth_stage: e.target.value })} placeholder="e.g. V6, Tasseling, Flowering" />
+            <input data-ai-field="growth_stage" type="text" value={form.growth_stage} onChange={e => setForm({ ...form, growth_stage: e.target.value })} placeholder="e.g. V6, Tasseling, Flowering" />
           </div>
           <div className="form-group">
             <label>Field ID (optional)</label>
-            <input type="text" value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} placeholder="optional field reference" />
+            <select data-ai-field="field_id" value={form.field_id} onChange={e => setForm({ ...form, field_id: e.target.value })} disabled={fieldsLoading || loading}><option value="">No field context</option>{fields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}</select>
           </div>
         </div>
         <div className="form-group" style={{ marginTop: 12 }}>
           <label>Forecast (paste text or JSON) *</label>
-          <textarea
+          <textarea data-ai-field="forecast"
             rows={8}
             value={form.forecast}
             onChange={e => setForm({ ...form, forecast: e.target.value })}
@@ -88,7 +109,7 @@ export default function WeatherRiskAlertPage() {
             style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit' }}
           />
         </div>
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
+        <button type="submit" className="btn btn-primary" disabled={loading || Boolean(fieldsError && form.field_id)} style={{ marginTop: 12 }}>
           {loading ? 'Analyzing...' : 'Analyze Risk'}
         </button>
       </form>
@@ -128,13 +149,11 @@ export default function WeatherRiskAlertPage() {
           )}
 
           <details style={{ background: 'var(--bg-card)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
-            <summary style={{ cursor: 'pointer' }}>Full JSON response</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 12 }}>
-              {JSON.stringify(result, null, 2)}
-            </pre>
+            <summary style={{ cursor: 'pointer' }}>Complete report</summary>
+            <FormattedAIReport response={result} />
           </details>
         </div>
       )}
-    </div>
+    </div></NativeAIControls>
   );
 }

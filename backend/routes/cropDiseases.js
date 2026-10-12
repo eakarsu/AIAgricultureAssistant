@@ -19,21 +19,21 @@ function handleValidation(req, res) {
 async function logAIResult(userId, feature, aiResult, entityType, entityId) {
   try {
     await pool.query(
-      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, submitted_input)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         userId, feature, aiResult.model,
         typeof aiResult.raw_json === 'object' ? JSON.stringify(aiResult.raw_json) : (aiResult.analysis || aiResult.identification || ''),
         aiResult.raw_json ? JSON.stringify(aiResult.raw_json) : null,
-        aiResult.confidence_score || null,
-        aiResult.usage?.total_tokens || null,
+        aiResult.confidence_score ?? null,
+        aiResult.usage?.total_tokens ?? null,
         aiResult.success !== false,
         aiResult.error || null,
-        entityType, entityId
+        entityType, entityId, aiResult.providerReceipt || require('../lib/nativeExecution').current()?.providerReceipt || null, require('../lib/nativeExecution').current()?.req.body || null
       ]
     );
   } catch (e) {
-    console.warn('Failed to log AI result:', e.message);
+    throw e;
   }
 }
 
@@ -111,6 +111,7 @@ router.post('/',
     body('severity')
       .optional()
       .isIn(['mild', 'moderate', 'severe', 'unknown']).withMessage('severity must be mild, moderate, severe, or unknown'),
+    body('detected_date').optional().isISO8601().withMessage('detected_date must be a valid date'),
     body('image_url')
       .optional()
       .isURL().withMessage('image_url must be a valid URL')
@@ -123,7 +124,8 @@ router.post('/',
       const { crop_name, symptoms, severity, image_url, location, detected_date } = req.body;
 
       // Get AI analysis with structured JSON output
-      const aiResult = await openRouterService.analyzeCropDisease({ crop_name, symptoms, location });
+      const aiResult = await openRouterService.analyzeCropDisease({ crop_name, symptoms, location, severity, detected_date, image_url });
+      if (aiResult.success === false) return res.status(503).json({ error: 'AI analysis is unavailable. No generated report or new record was saved. Retry after checking the configured provider.' });
 
       const result = await pool.query(
         `INSERT INTO crop_diseases
@@ -141,7 +143,7 @@ router.post('/',
           detected_date || new Date(),
           aiResult.analysis,
           aiResult.treatment_recommendations || aiResult.analysis,
-          aiResult.success ? (aiResult.confidence_score || 85) : 0,
+          aiResult.success ? (aiResult.confidence_score ?? null) : 0,
           aiResult.diagnosis || null
         ]
       );
@@ -232,7 +234,7 @@ router.post('/:id/analyze', authMiddleware, async (req, res) => {
       [
         aiResult.analysis,
         aiResult.treatment_recommendations || aiResult.analysis,
-        aiResult.success ? (aiResult.confidence_score || 85) : 0,
+        aiResult.success ? (aiResult.confidence_score ?? null) : 0,
         aiResult.diagnosis || null,
         aiResult.severity || null,
         req.params.id,

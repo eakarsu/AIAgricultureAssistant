@@ -1,50 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth, api } from '../contexts/AuthContext';
-
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const handleDemoLogin = async () => {
-    try {
-      setLoading(true); setError('');
-      const res = await api.get('/auth/demo-credentials');
-      setEmail(res.data.email); setPassword(res.data.password);
-    } catch {
-      setEmail(process.env.REACT_APP_DEMO_EMAIL || ''); setPassword(process.env.REACT_APP_DEMO_PASSWORD || '');
-    } finally { setLoading(false); }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); setError('');
-    try { await login(email, password); navigate('/'); }
-    catch (err) { setError(err.response?.data?.error || 'Login failed. Please try again.'); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="login-logo" aria-hidden="true">🌾</div>
-          <h1 className="login-title">AI Agriculture Assistant</h1>
-          <p className="login-subtitle">Smart farming powered by artificial intelligence</p>
-        </div>
-        <button className="btn btn-primary demo-btn" onClick={handleDemoLogin} disabled={loading}>Auto Fill Demo Credentials</button>
-        <div className="login-divider"><span>then click Sign In</span></div>
-        {error && <div className="alert alert-error" role="alert">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group"><label className="form-label" htmlFor="login-email">Email</label><input id="login-email" type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required /></div>
-          <div className="form-group"><label className="form-label" htmlFor="login-password">Password</label><input id="login-password" type="password" className="form-input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required /></div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
-        </form>
-        <div className="mt-2 text-center"><Link to="/forgot-password" className="text-link">Forgot Password?</Link></div>
-      </div>
-    </div>
-  );
-}
+import { useAuth } from '../contexts/AuthContext';
+const demoPair=()=>{if(!(process.env.NODE_ENV !== 'production' && process.env.REACT_APP_ENABLE_DEMO_CREDENTIAL_AUTOFILL==='true'))throw Error('Development demo credentials are disabled.');const email=process.env.REACT_APP_DEMO_EMAIL,password=process.env.REACT_APP_DEMO_PASSWORD;if(!email||!password)throw Error('The configured development account is unavailable.');return{email,password};};
+function validateIdentity(result,email){if(typeof result?.token!=='string'||!result.token||!result.user||!Number.isSafeInteger(Number(result.user.id))||result.user.email?.toLowerCase()!==email.trim().toLowerCase())throw Error('Native sign-in returned an invalid account. No session was saved.');let claims;try{claims=JSON.parse(atob(result.token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch(_){throw Error('The sign-in token was malformed. No session was saved.');}if(Number(claims.id)!==Number(result.user.id)||claims.email!==result.user.email||claims.role!==result.user.role||(claims.tenantId??claims.tenant_id??null)!==(result.user.tenantId??result.user.tenant_id??null))throw Error('The sign-in token does not match the returned account.');}
+export default function LoginPage(){
+const navigate=useNavigate();const {login}=useAuth();const lock=useRef(false);const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[error,setError]=useState('');const[busy,setBusy]=useState(false);
+async function signIn(pair){if(lock.current)return;lock.current=true;setBusy(true);setError('');try{const result=await login(pair.email,pair.password);validateIdentity(result,pair.email);navigate('/');}catch(error){setError(error.response?.data?.error||error.message||'Sign-in failed. Retry.');}finally{lock.current=false;setBusy(false);}}
+function fillCredentials(){try{const pair=demoPair();setEmail(pair.email);setPassword(pair.password);setError('');return pair;}catch(error){setError(error.message);return null;}}
+return <div className="login-container login-shell"><div className="login-card"><h1>AI Agriculture Assistant</h1><p>Use the existing configured account to open your native workspace.</p><div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}><button className="btn btn-primary" type="button" disabled={busy} onClick={()=>{const pair=fillCredentials();if(pair)signIn(pair);}}>Log In as Demo</button><button className="btn secondary" type="button" disabled={busy} onClick={fillCredentials}>Fill credentials</button></div>{error&&<p role="alert" className="ai-error alert alert-error">{error}</p>}<form onSubmit={event=>{event.preventDefault();signIn({email,password});}}><div className="form-group"><label htmlFor="login-email">Email</label><input className="form-input" id="login-email" type="email" value={email} onChange={event=>setEmail(event.target.value)} required autoComplete="username"/></div><div className="form-group"><label htmlFor="login-password">Password</label><input className="form-input" id="login-password" type="password" value={password} onChange={event=>setPassword(event.target.value)} required autoComplete="current-password"/></div><button type="submit" className="btn btn-primary" disabled={busy}>{busy?'Signing in…':'Sign In'}</button></form><p>Demo login does not create, reset or promote an account.</p><Link to="/forgot-password">Forgot password?</Link></div></div>;}

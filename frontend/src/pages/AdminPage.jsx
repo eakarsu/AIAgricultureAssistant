@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -10,16 +10,10 @@ export default function AdminPage() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('stats');
+  const [error,setError]=useState('');
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/admin/stats').catch(() => ({ data: { stats: {} } })),
-      api.get('/admin/users').catch(() => ({ data: { records: [] } })),
-      api.get('/admin/audit-logs').catch(() => ({ data: { records: [] } }))
-    ]).then(([s, u, a]) => {
-      setStats(s.data.stats); setUsers(u.data.records || []); setAuditLogs(a.data.records || []);
-    }).finally(() => setLoading(false));
-  }, [api]);
+  const load=useCallback(async()=>{setLoading(true);setError('');try{const[s,u,a]=await Promise.all([api.get('/admin/stats'),api.get('/admin/users'),api.get('/admin/audit-logs')]);if(!s.data?.stats||typeof s.data.stats!=='object'||Array.isArray(s.data.stats)||!Array.isArray(u.data?.records)||!Array.isArray(a.data?.records))throw Error('Native administrative data has an unexpected response.');setStats(s.data.stats);setUsers(u.data.records);setAuditLogs(a.data.records);}catch(error){setError(error.response?.data?.error||error.message||'Administrative records are unavailable. Retry.');}finally{setLoading(false);}},[api]);
+  useEffect(()=>{load();},[load]);
 
   if (loading) return <div className="loading" style={{ minHeight: '50vh' }}><div className="loading-spinner"></div></div>;
 
@@ -28,6 +22,8 @@ export default function AdminPage() {
       <button className="back-btn" onClick={() => navigate('/')}>← Back to Dashboard</button>
       <div className="page-header"><div><h1 className="page-title">🛡️ Admin Panel</h1><p className="page-description">System administration and monitoring</p></div></div>
 
+      {error&&<p role="alert">{error}<button type="button" onClick={load}>Retry</button></p>}
+      <p>Existing accounts and stored audit events are retained; this batch does not seed accounts, approvals or audit successes.</p>
       <div className="tab-nav mb-2">
         {['stats', 'users', 'audit'].map(tab => (
           <button key={tab} className={`tab-btn ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>

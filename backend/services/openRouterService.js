@@ -16,56 +16,28 @@ class OpenRouterService {
   constructor() {
     this.apiKey = process.env.OPENROUTER_API_KEY;
     // Upgrade to claude-3-5-sonnet for better analysis quality
-    this.model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022';
+    this.model = process.env.OPENROUTER_MODEL || '';
     this.baseUrl = 'openrouter.ai';
   }
 
   // Primary method: uses fetch with 30-second timeout (Node.js 18+)
-  async makeRequestFetch(prompt, systemPrompt = '') {
-    const body = JSON.stringify({
-      model: this.model,
-      messages: [
-        ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 10000,
-      temperature: 0.3
-    });
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
-
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:3000',
-          'X-Title': 'AI Agriculture Assistant'
-        },
-        body,
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
-      }
-
-      const parsed = await response.json();
-      if (parsed.error) {
-        throw new Error(parsed.error.message || 'OpenRouter API error');
-      }
-      return parsed;
-    } catch (err) {
-      clearTimeout(timeoutId);
-      if (err.name === 'AbortError') {
-        throw new Error('Request timed out after 45 seconds');
-      }
-      throw err;
-    }
+  async makeRequestFetch(prompt,systemPrompt=''){
+    const execution=require('../lib/nativeExecution'),context=execution.current();
+    if(context)await execution.freshActor(context,require('../config/database'));
+    const controller=new AbortController();let timedOut=false,response;
+    const timer=setTimeout(()=>{timedOut=true;controller.abort();},45000);
+    const signal=context?AbortSignal.any([controller.signal,context.controller.signal]):controller.signal;
+    try{
+      response=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+this.apiKey},body:JSON.stringify({model:this.model,messages:[...(systemPrompt?[{role:'system',content:systemPrompt}]:[]),{role:'user',content:prompt}],max_tokens:10000,temperature:0.3}),signal});
+      execution.active(context);
+      if(!response.ok)throw execution.failure(502,'OpenRouter rejected the request ('+response.status+')');
+      const parsed=await response.json();execution.active(context);
+      if(parsed.error||!parsed.id||typeof parsed.choices?.[0]?.message?.content!=='string'||!parsed.choices[0].message.content.trim()||parsed.choices[0].finish_reason==='length')throw execution.failure(502,'OpenRouter returned an incomplete response or missing provider receipt');
+      const receipt={id:String(parsed.id),provider:'openrouter',model:String(parsed.model||this.model),usage:parsed.usage??null};
+      if(context)context.providerReceipt=receipt;
+      parsed.providerReceipt=receipt;return parsed;
+    }catch(error){execution.active(context);if(timedOut)throw execution.failure(504,'OpenRouter request timed out. Retry when ready.');if(signal.aborted)throw execution.failure(499,'Request cancelled');throw error.status?error:execution.failure(502,'OpenRouter could not be reached or its response could not be read');}
+    finally{clearTimeout(timer);if(response?.body&&!response.bodyUsed)await response.body.cancel().catch(()=>{});controller.abort();}
   }
 
   // Fallback method: uses https.request (original implementation)
@@ -124,12 +96,8 @@ class OpenRouterService {
 
   // Main makeRequest: tries fetch first, falls back to https.request
   async makeRequest(prompt, systemPrompt = '') {
-    try {
-      return await this.makeRequestFetch(prompt, systemPrompt);
-    } catch (fetchErr) {
-      console.warn('fetch-based OpenRouter request failed, falling back to https.request:', fetchErr.message);
-      return await this.makeRequestHttps(prompt, systemPrompt);
-    }
+    if (!String(this.apiKey || '').trim() || !String(this.model || '').trim()) throw new Error('OpenRouter model and key must be configured');
+    return this.makeRequestFetch(prompt,systemPrompt);
   }
 
   // Crop Disease Detection - returns structured JSON
@@ -153,25 +121,27 @@ Crop: ${cropData.crop_name}
 Symptoms: ${cropData.symptoms}
 Location: ${cropData.location || 'Not specified'}
 ${cropData.additional_info ? `Additional Information: ${cropData.additional_info}` : ''}
+Submitted crop request context (user supplied, not independently verified): ${JSON.stringify(cropData)}
 
 Respond with ONLY a JSON object.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(cropData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
 
       const aiResult = parseAIJson(content) || {};
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         analysis: aiResult.analysis || content,
-        confidence_score: aiResult.confidence_score || 85,
+        confidence_score: aiResult.confidence_score ?? null,
         diagnosis: aiResult.diagnosis || null,
         severity: aiResult.severity || null,
         treatment_recommendations: aiResult.treatment_recommendations || null,
         prevention_measures: aiResult.prevention_measures || null,
         immediate_actions: aiResult.immediate_actions || null,
-        estimated_crop_loss_percent: aiResult.estimated_crop_loss_percent || null,
+        estimated_crop_loss_percent: aiResult.estimated_crop_loss_percent ?? null,
         organic_alternatives: aiResult.organic_alternatives || null,
         raw_json: aiResult,
         model: this.model,
@@ -209,29 +179,30 @@ Respond with ONLY a JSON object.`;
 
 Field Name: ${irrigationData.field_name}
 Crop Type: ${irrigationData.crop_type || 'Unknown'}
-Field Size: ${irrigationData.field_size || 'Unknown'} ${irrigationData.field_size_unit || 'acres'}
+Field Size: ${irrigationData.field_size ?? 'Unknown'} ${irrigationData.field_size_unit || 'acres'}
 Soil Type: ${irrigationData.soil_type || 'Not specified'}
-Current Soil Moisture: ${irrigationData.current_moisture || 'Not measured'}%
-Target Moisture: ${irrigationData.target_moisture || 'Not specified'}%
+Current Soil Moisture: ${irrigationData.current_moisture ?? 'Not measured'}%
+Target Moisture: ${irrigationData.target_moisture ?? 'Not specified'}%
 Current Weather: ${irrigationData.weather_condition || 'Not specified'}
-Temperature: ${irrigationData.temperature || 'Not specified'}°F
-Humidity: ${irrigationData.humidity || 'Not specified'}%
+Temperature: ${irrigationData.temperature ?? 'Not specified'}°F
+Humidity: ${irrigationData.humidity ?? 'Not specified'}%
 Last Irrigation: ${irrigationData.last_irrigation || 'Not specified'}
 
 Respond with ONLY a JSON object.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(irrigationData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
 
       const aiResult = parseAIJson(content) || {};
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         recommendation: aiResult.analysis || content,
-        water_needed_gallons: aiResult.water_needed_gallons || null,
+        water_needed_gallons: aiResult.water_needed_gallons ?? null,
         irrigation_schedule: aiResult.irrigation_schedule || null,
-        efficiency_score: aiResult.efficiency_score || null,
+        efficiency_score: aiResult.efficiency_score ?? null,
         optimization_tips: aiResult.optimization_tips || [],
         weather_considerations: aiResult.weather_considerations || null,
         estimated_cost_savings_percent: aiResult.estimated_cost_savings_percent || null,
@@ -275,7 +246,7 @@ Respond with ONLY a JSON object.`;
 
 Field Name: ${harvestData.field_name}
 Crop Type: ${harvestData.crop_type}
-Field Size: ${harvestData.field_size || 'Unknown'} ${harvestData.field_size_unit || 'acres'}
+Field Size: ${harvestData.field_size ?? 'Unknown'} ${harvestData.field_size_unit || 'acres'}
 Planting Date: ${harvestData.planting_date || 'Not specified'}
 Current Growth Stage: ${harvestData.current_growth_stage || 'Not specified'}
 Health Status: ${harvestData.health_status || 'Not specified'}
@@ -284,20 +255,21 @@ Weather Outlook: ${harvestData.weather_outlook || 'Not specified'}
 Respond with ONLY a JSON object.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(harvestData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
 
       const aiResult = parseAIJson(content) || {};
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         prediction: aiResult.analysis || content,
         expected_harvest_date: aiResult.expected_harvest_date || null,
         harvest_date_range_start: aiResult.harvest_date_range_start || null,
         harvest_date_range_end: aiResult.harvest_date_range_end || null,
-        predicted_yield: aiResult.predicted_yield || null,
+        predicted_yield: aiResult.predicted_yield ?? null,
         yield_unit: aiResult.yield_unit || null,
-        confidence_level: aiResult.confidence_level || null,
+        confidence_level: aiResult.confidence_level ?? null,
         quality_assessment: aiResult.quality_assessment || null,
         risk_factors: aiResult.risk_factors || [],
         market_timing_recommendation: aiResult.market_timing_recommendation || null,
@@ -347,17 +319,18 @@ ${pestData.additional_info ? `Additional Information: ${pestData.additional_info
 Respond with ONLY a JSON object.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(pestData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
 
       const aiResult = parseAIJson(content) || {};
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         identification: aiResult.analysis || content,
         pest_name: aiResult.pest_name || null,
         pest_type: aiResult.pest_type || null,
-        confidence_score: aiResult.confidence_score || null,
+        confidence_score: aiResult.confidence_score ?? null,
         infestation_level: aiResult.infestation_level || null,
         treatment_options: aiResult.treatment_options || null,
         organic_treatments: aiResult.organic_treatments || [],
@@ -405,27 +378,28 @@ Respond with ONLY a JSON object.`;
 
 Field Name: ${soilData.field_name}
 Sample Location: ${soilData.sample_location || 'Not specified'}
-pH Level: ${soilData.ph_level || 'Not measured'}
-Nitrogen (N): ${soilData.nitrogen_level || 'Not measured'} ppm
-Phosphorus (P): ${soilData.phosphorus_level || 'Not measured'} ppm
-Potassium (K): ${soilData.potassium_level || 'Not measured'} ppm
-Organic Matter: ${soilData.organic_matter || 'Not measured'}%
+pH Level: ${soilData.ph_level ?? 'Not measured'}
+Nitrogen (N): ${soilData.nitrogen_level ?? 'Not measured'} ppm
+Phosphorus (P): ${soilData.phosphorus_level ?? 'Not measured'} ppm
+Potassium (K): ${soilData.potassium_level ?? 'Not measured'} ppm
+Organic Matter: ${soilData.organic_matter ?? 'Not measured'}%
 Soil Texture: ${soilData.soil_texture || 'Not specified'}
-Moisture Content: ${soilData.moisture_content || 'Not measured'}%
-Electrical Conductivity: ${soilData.electrical_conductivity || 'Not measured'} dS/m
+Moisture Content: ${soilData.moisture_content ?? 'Not measured'}%
+Electrical Conductivity: ${soilData.electrical_conductivity ?? 'Not measured'} dS/m
 
 Respond with ONLY a JSON object.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(soilData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
 
       const aiResult = parseAIJson(content) || {};
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         analysis: aiResult.analysis || content,
-        health_score: aiResult.health_score || null,
+        health_score: aiResult.health_score ?? null,
         nutrient_status: aiResult.nutrient_status || null,
         ph_assessment: aiResult.ph_assessment || null,
         suitable_crops: aiResult.suitable_crops || [],
@@ -462,14 +436,15 @@ Respond with ONLY a JSON object.`;
     try {
       const response = await this.makeRequest(prompt, systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
-      const aiResult = parseAIJson(content) || { answer: content, key_points: [], follow_up_questions: [], confidence: 80 };
+      const aiResult = parseAIJson(content) || { answer: content, key_points: [], follow_up_questions: [], confidence: null };
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         answer: aiResult.answer || content,
         key_points: aiResult.key_points || [],
         follow_up_questions: aiResult.follow_up_questions || [],
-        confidence: aiResult.confidence || 80,
+        confidence: aiResult.confidence ?? null,
         sources_to_verify: aiResult.sources_to_verify || [],
         model: this.model,
         usage: response.usage,
@@ -502,12 +477,13 @@ Location: ${farmData.location || 'Unknown'}
 Calculate carbon footprint and provide reduction recommendations.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(farmData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
       const aiResult = parseAIJson(content) || {};
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         ...aiResult,
         model: this.model,
         usage: response.usage,
@@ -535,12 +511,13 @@ Weather Summary: ${JSON.stringify(reportData.weather || {})}
 Generate a comprehensive weekly farm management report.`;
 
     try {
-      const response = await this.makeRequest(prompt, systemPrompt);
+      const response = await this.makeRequest(prompt+'\n\nComplete submitted request (hypothetical planning inputs are not verified observations): '+JSON.stringify(reportData), systemPrompt);
       const content = response.choices?.[0]?.message?.content || '';
       const aiResult = parseAIJson(content) || { report_markdown: content };
 
       return {
         success: true,
+        providerReceipt: response.providerReceipt,
         ...aiResult,
         model: this.model,
         usage: response.usage,

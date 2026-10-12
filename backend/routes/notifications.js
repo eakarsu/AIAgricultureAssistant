@@ -41,6 +41,9 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/:id',authMiddleware,async(req,res)=>{try{const row=(await pool.query('SELECT * FROM notifications WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Notification not found'});res.json({record:row});}catch(_){res.status(503).json({error:'Native notification details could not be loaded. Retry.'});}});
+router.put('/:id/read-state',authMiddleware,async(req,res)=>{if(Object.keys(req.body||{}).some(key=>key!=='is_read')||typeof req.body?.is_read!=='boolean')return res.status(400).json({error:'Only the boolean native read state can be edited.'});try{const row=(await pool.query('UPDATE notifications SET is_read=$1 WHERE id=$2 AND user_id=$3 RETURNING *',[req.body.is_read,req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Notification not found'});res.json({record:row});}catch(_){res.status(503).json({error:'Native read state could not be saved. Retry.'});}});
+
 // Mark notification as read
 router.put('/:id/read', authMiddleware, async (req, res) => {
   try {

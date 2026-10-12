@@ -9,11 +9,12 @@ export default function FieldMapPage() {
   const [loading, setLoading] = useState(true);
   const [selectedField, setSelectedField] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [error,setError]=useState('');
   const [formData, setFormData] = useState({ name: '', description: '', latitude: '', longitude: '', area_size: '', crop_type: '', soil_type: '', color: '#2e7d32' });
 
   const fetchFields = useCallback(async () => {
-    try { const res = await api.get('/fields'); setFields(res.data.records || []); }
-    catch (err) { console.error(err); } finally { setLoading(false); }
+    try { setLoading(true);setError('');const res=await api.get('/fields?limit=100');if(!Array.isArray(res.data.records))throw Error('Native field list has an unexpected response.');setFields(res.data.records); }
+    catch (err) {setError(err.response?.data?.error||err.message||'Native field operation failed. Retry.');} finally { setLoading(false); }
   }, [api]);
 
   useEffect(() => { fetchFields(); }, [fetchFields]);
@@ -23,7 +24,7 @@ export default function FieldMapPage() {
       if (selectedField) await api.put(`/fields/${selectedField.id}`, formData);
       else await api.post('/fields', formData);
       setShowForm(false); setSelectedField(null); fetchFields();
-    } catch (err) { console.error(err); }
+    } catch (err) {setError(err.response?.data?.error||err.message||'Native field operation failed. Retry.');}
   };
 
   const handleDelete = async (id) => {
@@ -41,6 +42,7 @@ export default function FieldMapPage() {
         <button className="btn btn-primary" onClick={() => { setSelectedField(null); setFormData({ name: '', description: '', latitude: '', longitude: '', area_size: '', crop_type: '', soil_type: '', color: '#2e7d32' }); setShowForm(true); }}>+ Add Field</button>
       </div>
 
+      {error&&<p role="alert">{error}<button type="button" onClick={fetchFields}>Retry</button></p>}
       <div className="card">
         {loading ? <div className="loading"><div className="loading-spinner"></div></div> :
         fields.length === 0 ? <div className="empty-state"><div className="empty-state-icon">🗺️</div><h3 className="empty-state-title">No fields added</h3><p className="empty-state-description">Add your first field location</p></div> :
@@ -71,7 +73,7 @@ export default function FieldMapPage() {
               {selectedField.description && <p className="mt-2">{selectedField.description}</p>}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setSelectedField(null)}>Close</button>
+              <button className="btn btn-ghost" onClick={() => setSelectedField(null)}>Cancel</button>
               <button className="btn btn-outline" onClick={() => { setFormData(selectedField); setShowForm(true); }}>Edit</button>
               <button className="btn btn-danger" onClick={() => handleDelete(selectedField.id)}>Delete</button>
             </div>

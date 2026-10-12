@@ -17,14 +17,14 @@ function handleValidation(req, res) {
 async function logAIResult(userId, feature, aiResult, entityType, entityId) {
   try {
     await pool.query(
-      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, submitted_input)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [userId, feature, aiResult.model, JSON.stringify(aiResult.raw_json || {}),
        aiResult.raw_json ? JSON.stringify(aiResult.raw_json) : null,
-       aiResult.confidence_level || null, aiResult.usage?.total_tokens || null,
-       aiResult.success !== false, aiResult.error || null, entityType, entityId]
+       aiResult.confidence_level ?? null, aiResult.usage?.total_tokens ?? null,
+       aiResult.success !== false, aiResult.error || null, entityType, entityId, aiResult.providerReceipt || require('../lib/nativeExecution').current()?.providerReceipt || null, require('../lib/nativeExecution').current()?.req.body || null]
     );
-  } catch (e) { console.warn('Failed to log AI result:', e.message); }
+  } catch (e) { throw e; }
 }
 
 // Get all harvest predictions
@@ -96,6 +96,7 @@ router.post('/',
         field_name, crop_type, planting_date, field_size, field_size_unit,
         current_growth_stage, health_status, weather_outlook
       });
+      if (aiResult.success === false) return res.status(503).json({ error: 'AI analysis is unavailable. No generated report or new record was saved. Retry after checking the configured provider.' });
 
       // Parse risk_factors array to text for DB storage
       const riskFactorsText = Array.isArray(aiResult.risk_factors)
@@ -112,12 +113,12 @@ router.post('/',
          RETURNING *`,
         [
           req.user.id, field_name, crop_type, planting_date || null,
-          field_size || null, field_size_unit || 'acres',
+          field_size ?? null, field_size_unit || 'acres',
           current_growth_stage || null, health_status || null, weather_outlook || null,
           aiResult.prediction,
-          aiResult.confidence_level || null,
+          aiResult.confidence_level ?? null,
           aiResult.expected_harvest_date || null,
-          aiResult.predicted_yield || null,
+          aiResult.predicted_yield ?? null,
           aiResult.yield_unit || null,
           aiResult.revenue_estimate_high || null,
           riskFactorsText

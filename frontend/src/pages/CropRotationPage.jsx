@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import useFarmFields from '../components/useFarmFields';
+import FarmFieldAvailability from '../components/FarmFieldAvailability';
+import NativeAIControls from "../components/NativeAIControls.jsx";
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function CropRotationPage() {
   const { api } = useAuth();
-  const [fields, setFields] = useState([]);
+  const { fields, fieldsLoading, fieldsError, loadFields } = useFarmFields(api);
   const [fieldId, setFieldId] = useState('');
   const [historyYears, setHistoryYears] = useState(5);
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.get('/fields')
-      .then(res => setFields(res.data.records || res.data || []))
-      .catch(() => {});
-  }, [api]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -23,7 +22,7 @@ export default function CropRotationPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await api.post('/ai/crop-rotation', { field_id: fieldId, history_years: Number(historyYears) });
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/crop-rotation',{ field_id: fieldId, history_years: Number(historyYears) },{signal}));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Recommendation failed');
@@ -35,7 +34,7 @@ export default function CropRotationPage() {
   const a = result?.analysis || {};
 
   return (
-    <div className="page">
+    <NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant"><div className="page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Crop Rotation Advisor</h1>
@@ -43,11 +42,12 @@ export default function CropRotationPage() {
         </div>
       </div>
 
+      <FarmFieldAvailability fields={fields} fieldsLoading={fieldsLoading} fieldsError={fieldsError} loadFields={loadFields} />
       <form onSubmit={submit} className="form-card" style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
           <div className="form-group">
             <label>Field</label>
-            <select value={fieldId} onChange={e => setFieldId(e.target.value)} required>
+            <select data-ai-field={"fieldId"} value={fieldId} onChange={e => setFieldId(e.target.value)} required>
               <option value="">-- Select a field --</option>
               {fields.map(f => (
                 <option key={f.id} value={f.id}>
@@ -58,11 +58,11 @@ export default function CropRotationPage() {
           </div>
           <div className="form-group">
             <label>History (years)</label>
-            <input type="number" min="1" max="20" value={historyYears} onChange={e => setHistoryYears(e.target.value)} />
+            <input data-ai-field={"historyYears"} type="number" min="1" max="20" value={historyYears} onChange={e => setHistoryYears(e.target.value)} />
           </div>
         </div>
-        <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
-          {loading ? 'Analyzing...' : 'Get Recommendation'}
+        <button type="submit" className="btn btn-primary" disabled={loading || fieldsLoading || Boolean(fieldsError) || !fields.some(field => String(field.id) === String(fieldId))} style={{ marginTop: 12 }}>
+          {loading ? 'Analyzing...' : 'Generate with OpenRouter'}
         </button>
       </form>
 
@@ -116,6 +116,6 @@ export default function CropRotationPage() {
           </div>
         </div>
       )}
-    </div>
+    </div></NativeAIControls>
   );
 }

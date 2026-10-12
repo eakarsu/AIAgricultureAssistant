@@ -60,6 +60,10 @@ export default function Header() {
             💧 Irrigation AI
           </button>
 
+          <button className="btn btn-icon header-icon-btn" onClick={() => { navigate('/ai/operations-review'); setShowMobileMenu(false); }} aria-label="Farm operations AI" title="Farm operations AI">
+            AI Operations
+          </button>
+
           <button className="btn btn-icon header-icon-btn" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title="Toggle theme">
             {theme === 'light' ? '🌙' : '☀️'}
           </button>

@@ -17,25 +17,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401 && localStorage.getItem('token')) {
-      try {
-        const res = await axios.post('/api/auth/refresh-token', {}, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        localStorage.setItem('token', res.data.token);
-        error.config.headers.Authorization = `Bearer ${res.data.token}`;
-        return axios(error.config);
-      } catch {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+api.interceptors.response.use(response=>response,error=>{if(error.response?.status===401&&error.config?.url!=='/auth/login'){localStorage.removeItem('token');}return Promise.reject(error);});
+function validateIdentity(value,email){if(typeof value?.token!=='string'||!value.token||!value.user||!Number.isSafeInteger(Number(value.user.id))||value.user.email?.toLowerCase()!==email.trim().toLowerCase())throw Error('Native sign-in returned an invalid account.');let claims;try{claims=JSON.parse(atob(value.token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch(_){throw Error('Native sign-in returned a malformed token.');}if(Number(claims.id)!==Number(value.user.id)||claims.email!==value.user.email||claims.role!==value.user.role)throw Error('The sign-in token does not match the account.');}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -55,6 +38,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
+    validateIdentity(res.data,email);
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
     return res.data;

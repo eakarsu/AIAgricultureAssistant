@@ -1,3 +1,5 @@
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,7 +19,7 @@ export default function CarbonFootprintPage() {
     livestock: '',
     location: ''
   });
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -29,7 +31,7 @@ export default function CarbonFootprintPage() {
     try {
       const payload = {};
       Object.entries(form).forEach(([k, v]) => { if (v !== '') payload[k] = v; });
-      const res = await api.post('/ai/carbon-footprint', payload);
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/carbon-footprint',payload,{signal}));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Calculation failed');
@@ -56,46 +58,48 @@ export default function CarbonFootprintPage() {
       </div>
 
       <form onSubmit={submit} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
+<NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="form-group">
             <label>Farm Size (acres)</label>
-            <input type="number" min="0" step="0.1" value={form.farm_size} onChange={e => setForm({ ...form, farm_size: e.target.value })} placeholder="e.g. 250" />
+            <input data-ai-field={"farm_size"} type="number" min="0" step="0.1" value={form.farm_size} onChange={e => setForm({ ...form, farm_size: e.target.value })} placeholder="e.g. 250" />
           </div>
           <div className="form-group">
             <label>Location</label>
-            <input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="e.g. Iowa, USA" />
+            <input data-ai-field={"location"} type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="e.g. Iowa, USA" />
           </div>
           <div className="form-group">
             <label>Crops Grown</label>
-            <input type="text" value={form.crops} onChange={e => setForm({ ...form, crops: e.target.value })} placeholder="e.g. Corn, Soybean, Wheat" />
+            <input data-ai-field={"crops"} type="text" value={form.crops} onChange={e => setForm({ ...form, crops: e.target.value })} placeholder="e.g. Corn, Soybean, Wheat" />
           </div>
           <div className="form-group">
             <label>Irrigation Type</label>
-            <select value={form.irrigation_type} onChange={e => setForm({ ...form, irrigation_type: e.target.value })}>
+            <select data-ai-field={"irrigation_type"} value={form.irrigation_type} onChange={e => setForm({ ...form, irrigation_type: e.target.value })}>
               {IRRIGATION_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div className="form-group">
             <label>Annual Water Usage (gallons)</label>
-            <input type="number" min="0" value={form.water_usage} onChange={e => setForm({ ...form, water_usage: e.target.value })} placeholder="e.g. 500000" />
+            <input data-ai-field={"water_usage"} type="number" min="0" value={form.water_usage} onChange={e => setForm({ ...form, water_usage: e.target.value })} placeholder="e.g. 500000" />
           </div>
           <div className="form-group">
             <label>Fertilizer Usage (lbs/acre/year)</label>
-            <input type="number" min="0" value={form.fertilizer_usage} onChange={e => setForm({ ...form, fertilizer_usage: e.target.value })} placeholder="e.g. 150" />
+            <input data-ai-field={"fertilizer_usage"} type="number" min="0" value={form.fertilizer_usage} onChange={e => setForm({ ...form, fertilizer_usage: e.target.value })} placeholder="e.g. 150" />
           </div>
           <div className="form-group">
             <label>Machinery Used</label>
-            <input type="text" value={form.machinery} onChange={e => setForm({ ...form, machinery: e.target.value })} placeholder="e.g. Tractor, Combine, Sprayer" />
+            <input data-ai-field={"machinery"} type="text" value={form.machinery} onChange={e => setForm({ ...form, machinery: e.target.value })} placeholder="e.g. Tractor, Combine, Sprayer" />
           </div>
           <div className="form-group">
             <label>Livestock (if any)</label>
-            <input type="text" value={form.livestock} onChange={e => setForm({ ...form, livestock: e.target.value })} placeholder="e.g. 50 cattle, 200 chickens" />
+            <input data-ai-field={"livestock"} type="text" value={form.livestock} onChange={e => setForm({ ...form, livestock: e.target.value })} placeholder="e.g. 50 cattle, 200 chickens" />
           </div>
         </div>
         <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
-          {loading ? 'Calculating...' : 'Calculate Carbon Footprint'}
+          {loading ? 'Calculating...' : 'Generate with OpenRouter'}
         </button>
-      </form>
+      </NativeAIControls>
+</form>
 
       {error && <div className="alert alert-error">{error}</div>}
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -14,14 +14,8 @@ export default function CropYieldChart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
-    api.get('/custom-views/yield-trends')
-      .then((res) => mounted && setData(res.data || { seasons: [], fields: [] }))
-      .catch((e) => mounted && setError(e.response?.data?.error || e.message || 'Failed to load'))
-      .finally(() => mounted && setLoading(false));
-    return () => { mounted = false; };
-  }, []);
+  const load=useCallback(async()=>{setLoading(true);setError('');try{const result=await api.get('/custom-views/yield-trends');if(!Array.isArray(result.data.seasons)||!Array.isArray(result.data.fields))throw Error('Native yield data has an unexpected response.');setData(result.data);}catch(error){setError(error.response?.data?.error||error.message||'Yield data is unavailable. Retry.');}finally{setLoading(false);}},[]);
+  useEffect(()=>{load();},[load]);
 
   const lines = useMemo(() => {
     return (data.fields || []).map((f, i) => (
@@ -41,9 +35,9 @@ export default function CropYieldChart() {
     <div className="card" style={{ padding: 16 }}>
       <h3 style={{ marginTop: 0 }}>Crop Yield Trends (per field, per season)</h3>
       {loading && <div>Loading yield trends...</div>}
-      {error && <div style={{ color: '#c62828' }}>Error: {error}</div>}
+      {error && <div role="alert" style={{ color: '#c62828' }}>Error: {error}<button type="button" onClick={load}>Retry</button></div>}
       {!loading && !error && (data.seasons || []).length === 0 && (
-        <div>No harvest predictions available yet — create some under the Harvest page.</div>
+        <div>No non-empty yield predictions are available. Fictional planning drafts with unknown yields are excluded rather than charted as zero.</div>
       )}
       {!loading && !error && (data.seasons || []).length > 0 && (
         <div style={{ width: '100%', height: 360 }}>

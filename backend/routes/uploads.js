@@ -67,6 +67,11 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/:id/file',authMiddleware,async(req,res)=>{try{const row=(await pool.query('SELECT filename,original_name FROM uploaded_files WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'File not found'});const filename=path.basename(row.filename);if(filename!==row.filename)return res.status(409).json({error:'Stored file identity is invalid; no file was served.'});const target=path.join(uploadsDir,filename);if(!fs.existsSync(target))return res.status(404).json({error:'The actual stored file is unavailable. Metadata was retained; no replacement file was fabricated.'});res.download(target,row.original_name,error=>{if(error&&!res.headersSent)res.status(503).json({error:'The actual file could not be downloaded. Retry.'});});}catch(error){res.status(503).json({error:'The actual file could not be loaded. Retry.'});}});
+
+router.get('/:id',authMiddleware,async(req,res)=>{try{const row=(await pool.query('SELECT * FROM uploaded_files WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'File not found'});res.json({record:row});}catch(_){res.status(503).json({error:'Native file details could not be loaded. Retry.'});}});
+router.put('/:id',authMiddleware,async(req,res)=>{const body=req.body||{};if(Object.keys(body).some(key=>!['category','description'].includes(key))||typeof body.category!=='string'||body.category.length>50||typeof body.description!=='string'||body.description.length>4000)return res.status(400).json({error:'Only text category and description may be edited; the actual file identity is retained.'});try{const row=(await pool.query('UPDATE uploaded_files SET category=$1,description=$2 WHERE id=$3 AND user_id=$4 RETURNING *',[body.category,body.description,req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'File not found'});res.json({record:row});}catch(_){res.status(503).json({error:'Native file metadata could not be saved. Retry.'});}});
+
 // Upload file
 router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
   try {
@@ -93,6 +98,7 @@ router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
 
     res.status(201).json({ record: result.rows[0] });
   } catch (error) {
+    if(req.file?.path)try{fs.unlinkSync(req.file.path);}catch(_){}
     console.error('Error uploading file:', error);
     res.status(500).json({ error: 'Server error' });
   }

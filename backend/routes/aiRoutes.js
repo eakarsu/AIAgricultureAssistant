@@ -10,6 +10,32 @@ const { body, query, validationResult } = require('express-validator');
 // Apply AI rate limiter to all routes in this file
 router.use(aiLimiter);
 
+// Fresh native source authorization; never substitute an invented field.
+router.use((req, res, next) => {
+  if (req.method !== 'POST') return next();
+  authMiddleware(req, res, async () => {
+    try {
+      const actor = (await pool.query('SELECT id,email,role FROM users WHERE id=$1', [req.user.id])).rows[0];
+      if (!actor || actor.email !== req.user.email || actor.role !== req.user.role) return res.status(401).json({ error: 'Your account identity has changed. Please sign in again.' });
+      const field = req.body?.field_id;
+      if (field !== undefined && field !== '') {
+        if (!Number.isSafeInteger(Number(field)) || Number(field) <= 0) return res.status(400).json({ error: 'field_id must identify an accessible farm field' });
+        const source = (await pool.query("SELECT * FROM field_locations WHERE id=$1 AND user_id=$2 AND status='active'", [field, actor.id])).rows[0];
+        if (!source) return res.status(404).json({ error: 'Farm field not found or unavailable to your account' });
+        req.nativeFarmField = source;
+      }
+      next();
+    } catch (_) { res.status(503).json({ error: 'Your account or farm source could not be loaded. Retry before generating.' }); }
+  });
+});
+
+
+function nativeFieldContext(req) {
+  const field = req.nativeFarmField;
+  if (!field) return '';
+  return '\nAuthorized field context (existing account record; missing values stay unknown): ' + JSON.stringify({ id: field.id, is_demo: field.is_demo ?? false, name: field.name, crop_type: field.crop_type ?? null, soil_type: field.soil_type ?? null, area_size: field.area_size ?? null, area_unit: field.area_unit ?? null });
+}
+
 // Helper: handle validation errors
 function handleValidation(req, res) {
   const errors = validationResult(req);
@@ -23,20 +49,20 @@ function handleValidation(req, res) {
 async function logAIResult(userId, feature, aiResult, entityType, entityId) {
   try {
     await pool.query(
-      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO ai_results (user_id, feature, model, raw_response, parsed_result, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, submitted_input)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         userId, feature, aiResult.model || openRouterService.model,
         JSON.stringify(aiResult.raw_json || {}),
         aiResult.raw_json ? JSON.stringify(aiResult.raw_json) : null,
-        aiResult.confidence_score || aiResult.confidence_percentage || null,
-        aiResult.usage?.total_tokens || null,
+        aiResult.confidence_score ?? aiResult.confidence_percentage ?? null,
+        aiResult.usage?.total_tokens ?? null,
         aiResult.success !== false,
         aiResult.error || null,
-        entityType, entityId
+        entityType, entityId, aiResult.providerReceipt || require('../lib/nativeExecution').current()?.providerReceipt || null, require('../lib/nativeExecution').current()?.req.body || null
       ]
     );
-  } catch (e) { console.warn('Failed to log AI result:', e.message); }
+  } catch (e) { throw e; }
 }
 
 // GET /api/ai/results — AI call history for the current user
@@ -70,12 +96,12 @@ router.get('/results',
       // Build parameterized query
       let queryText, queryParams;
       if (feature) {
-        queryText = `SELECT id, feature, model, confidence_score, tokens_used, success, error_message, entity_type, entity_id, created_at
+        queryText = `SELECT id, feature, model, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, created_at
                      FROM ai_results WHERE user_id = $1 AND feature = $3
                      ORDER BY created_at DESC LIMIT $2 OFFSET $4`;
         queryParams = [req.user.id, limit, feature, offset];
       } else {
-        queryText = `SELECT id, feature, model, confidence_score, tokens_used, success, error_message, entity_type, entity_id, created_at
+        queryText = `SELECT id, feature, model, confidence_score, tokens_used, success, error_message, entity_type, entity_id, provider_receipt, created_at
                      FROM ai_results WHERE user_id = $1
                      ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
         queryParams = [req.user.id, limit, offset];
@@ -94,6 +120,8 @@ router.get('/results',
   }
 );
 
+router.get('/results/:id',authMiddleware,async(req,res)=>{try{if(!/^[1-9]\d*$/.test(req.params.id))return res.status(400).json({error:'Invalid report ID'});const row=(await pool.query('SELECT * FROM ai_results WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id])).rows[0];if(!row)return res.status(404).json({error:'Saved report not found'});res.json({record:row,canDelete:false,retainedReason:'Original native provider receipts and submitted input are retained. Edit inputs creates a separate request.'});}catch(_){res.status(503).json({error:'Saved report details could not be loaded. Retry.'});}});
+
 // POST /api/ai/crop-rotation
 // Takes { field_id, history_years: 5 }, recommends next season crop
 router.post('/crop-rotation',
@@ -111,20 +139,17 @@ router.post('/crop-rotation',
 
       // Fetch field info
       let fieldInfo = null;
-      try {
         const fieldResult = await pool.query(
           'SELECT * FROM field_locations WHERE id = $1 AND user_id = $2',
           [field_id, req.user.id]
         );
         if (fieldResult.rows.length > 0) fieldInfo = fieldResult.rows[0];
-      } catch (e) { /* ignore */ }
 
       // Fetch past crop history from harvest_predictions
       const yearsAgo = new Date();
       yearsAgo.setFullYear(yearsAgo.getFullYear() - history_years);
 
       let cropHistory = [];
-      try {
         const historyResult = await pool.query(
           `SELECT crop_type, planting_date, field_name, health_status, predicted_yield
            FROM harvest_predictions
@@ -133,7 +158,6 @@ router.post('/crop-rotation',
           [req.user.id, yearsAgo]
         );
         cropHistory = historyResult.rows;
-      } catch (e) { /* ignore */ }
 
       const fieldText = fieldInfo
         ? `Field: ${fieldInfo.name}, Soil Type: ${fieldInfo.soil_type || 'Unknown'}, Size: ${fieldInfo.area_size || 'N/A'} ${fieldInfo.area_unit || ''}, Current Crop: ${fieldInfo.crop_type || 'N/A'}`
@@ -147,7 +171,7 @@ router.post('/crop-rotation',
 
       const userPrompt = `Field Information:\n${fieldText}\n\nCrop History (last ${history_years} years):\n${historyText}\n\nRecommend the optimal crop for next season.`;
 
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
 
       const parsedResult = parseAIJson(content) || { rotation_reasoning: content };
@@ -208,17 +232,14 @@ router.post('/yield-prediction',
 
       // Fetch field info
       let fieldInfo = null;
-      try {
         const fieldResult = await pool.query(
           'SELECT * FROM field_locations WHERE id = $1 AND user_id = $2',
           [field_id, req.user.id]
         );
         if (fieldResult.rows.length > 0) fieldInfo = fieldResult.rows[0];
-      } catch (e) { /* ignore */ }
 
       // Fetch historical yield data for this crop
       let historicalData = [];
-      try {
         const histResult = await pool.query(
           `SELECT crop_type, planting_date, expected_harvest_date, predicted_yield, yield_unit,
                   health_status, weather_outlook, field_size, field_size_unit, confidence_level
@@ -229,7 +250,6 @@ router.post('/yield-prediction',
           [req.user.id, `%${crop_type}%`]
         );
         historicalData = histResult.rows;
-      } catch (e) { /* ignore */ }
 
       const fieldText = fieldInfo
         ? `Field: ${fieldInfo.name}, Soil: ${fieldInfo.soil_type || 'Unknown'}, Size: ${fieldInfo.area_size || 'N/A'} ${fieldInfo.area_unit || ''}`
@@ -243,7 +263,7 @@ router.post('/yield-prediction',
 
       const userPrompt = `Field: ${fieldText}\nCrop Type: ${crop_type}\nSeason: ${season}\n\nHistorical Yield Data:\n${historyText}\n\nPredict the yield for ${crop_type} in the ${season} season.`;
 
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
 
       const parsedResult = parseAIJson(content) || { harvest_date_estimate: content };
@@ -260,7 +280,7 @@ router.post('/yield-prediction',
           fieldInfo?.name || `Field ${field_id}`,
           crop_type,
           content,
-          parsedResult.confidence_percentage || 75,
+          parsedResult.confidence_percentage ?? null,
           parsedResult.predicted_yield_high || null,
           parsedResult.predicted_yield_unit || null,
           parsedResult.revenue_estimate_high || null,
@@ -309,17 +329,14 @@ router.post('/pest-forecast',
 
       // Fetch field info
       let fieldInfo = null;
-      try {
         const fieldResult = await pool.query(
           'SELECT * FROM field_locations WHERE id = $1 AND user_id = $2',
           [field_id, req.user.id]
         );
         if (fieldResult.rows.length > 0) fieldInfo = fieldResult.rows[0];
-      } catch (e) { /* ignore */ }
 
       // Fetch past pest history
       let pastPests = [];
-      try {
         const pestResult = await pool.query(
           `SELECT pest_name, pest_type, affected_crop, severity, infestation_level, detected_date, treatment_options
            FROM pest_identifications
@@ -329,7 +346,6 @@ router.post('/pest-forecast',
           [req.user.id]
         );
         pastPests = pestResult.rows;
-      } catch (e) { /* ignore */ }
 
       const fieldText = fieldInfo
         ? `Field: ${fieldInfo.name}, Crop: ${fieldInfo.crop_type || 'Unknown'}, Size: ${fieldInfo.area_size || 'N/A'} ${fieldInfo.area_unit || ''}`
@@ -343,7 +359,7 @@ router.post('/pest-forecast',
 
       const userPrompt = `Field: ${fieldText}\nPest Type: ${pest_type}\nCurrent Severity: ${current_severity}\n\nPast Pest History:\n${pastPestText}\n\nForecast the outbreak probability for ${pest_type} over the next 2-3 weeks.`;
 
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
 
       const parsedResult = parseAIJson(content) || { forecast_severity: content };
@@ -361,7 +377,7 @@ router.post('/pest-forecast',
           fieldInfo?.name || `Field ${field_id}`,
           parsedResult.forecast_severity || current_severity,
           content,
-          parsedResult.outbreak_probability_2_weeks || 50,
+          parsedResult.outbreak_probability_2_weeks ?? null,
           pest_type
         ]
       );
@@ -410,7 +426,7 @@ router.post('/find-subsidies',
 
       const userPrompt = `Farmer Profile:\nLocation: ${location}\nFarm Type: ${farm_type}\nCrops Grown: ${cropsText}\n\nIdentify all relevant USDA programs, organic farming subsidies, conservation grants, crop insurance options, and other government assistance programs.`;
 
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
 
       const parsedResult = parseAIJson(content) || { programs: [], raw_response: content };
@@ -474,7 +490,6 @@ router.post('/farm-chat',
       // Auto-build farm context from user's data if not provided
       let enrichedContext = { ...farm_context };
       if (Object.keys(farm_context).length === 0) {
-        try {
           const [fieldsRes, diseasesRes, pestsRes] = await Promise.all([
             pool.query(`SELECT name, crop_type, area_size FROM field_locations WHERE user_id = $1 AND status = 'active' LIMIT 5`, [req.user.id]),
             pool.query(`SELECT crop_name, disease_name, severity FROM crop_diseases WHERE user_id = $1 AND status = 'active' LIMIT 5`, [req.user.id]),
@@ -485,7 +500,6 @@ router.post('/farm-chat',
             active_diseases: diseasesRes.rows,
             active_pests: pestsRes.rows
           };
-        } catch (e) { /* ignore */ }
       }
 
       const aiResult = await openRouterService.farmChat(message, enrichedContext);
@@ -587,7 +601,6 @@ router.post('/carbon-footprint',
 
       // Auto-fill from user profile if not provided
       if (!farmData.farm_size || !farmData.crops) {
-        try {
           const userRes = await pool.query('SELECT farm_size, location FROM users WHERE id = $1', [req.user.id]);
           const fieldsRes = await pool.query(
             `SELECT crop_type, area_size FROM field_locations WHERE user_id = $1 AND status = 'active' LIMIT 10`,
@@ -598,7 +611,6 @@ router.post('/carbon-footprint',
           if (fieldsRes.rows.length > 0 && !farmData.crops) {
             farmData.crops = fieldsRes.rows.map(f => f.crop_type).filter(Boolean).join(', ');
           }
-        } catch (e) { /* ignore */ }
       }
 
       const aiResult = await openRouterService.calculateCarbonFootprint(farmData);
@@ -742,7 +754,7 @@ ${forecastText}
 
 Identify risks and recommend actions.`;
 
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { next_72h_summary: content };
 
@@ -820,7 +832,7 @@ Target yield: ${target_yield || 'unspecified'}
 
 Recommend soil amendments.`;
 
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { summary: content };
 
@@ -884,7 +896,7 @@ router.post('/disease-id-text',
   "confidence_score": number
 }`;
       const userPrompt = `Crop: ${crop_type}\nField: ${field_id || 'N/A'}\nSymptom description:\n${symptoms_description}`;
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { differential_summary: content };
       await logAIResult(req.user.id, 'disease_id_text', { model: openRouterService.model, raw_json: parsedResult, usage: aiResponse.usage, success: true }, 'field_locations', field_id || null);
@@ -933,10 +945,10 @@ router.post('/market-price-prediction',
   "data_quality_note": "string"
 }`;
       const userPrompt = `Commodity: ${commodity}\nRegion: ${region || 'global'}\nHorizon (days): ${horizon}\nRecent prices: ${series}`;
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { summary: content };
-      await logAIResult(req.user.id, 'market_price_prediction', { model: openRouterService.model, raw_json: parsedResult, usage: aiResponse.usage, success: true }, 'commodity', commodity);
+      await logAIResult(req.user.id, 'market_price_prediction', { model: openRouterService.model, raw_json: parsedResult, usage: aiResponse.usage, success: true }, 'commodity', null); // Commodity is caller text, not a persisted integer record reference.
       res.json({ analysis: parsedResult, commodity, horizon_days: horizon });
     } catch (error) {
       console.error('market-price-prediction error:', error);
@@ -982,7 +994,7 @@ router.post('/sustainability-score',
   "confidence_score": number
 }`;
       const userPrompt = `Farm summary:\n${summaryText}`;
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { summary: content };
       await logAIResult(req.user.id, 'sustainability_score', { model: openRouterService.model, raw_json: parsedResult, usage: aiResponse.usage, success: true }, 'field_locations', field_id || null);
@@ -1025,7 +1037,7 @@ router.post('/irrigation-optimize-text',
   "confidence_score": number
 }`;
       const userPrompt = `Field: ${field_id || 'N/A'}\nCrop: ${crop_type || 'unspecified'}\nSnapshot:\n${snapshotText}`;
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { summary: content };
       await logAIResult(req.user.id, 'irrigation_optimize_text', { model: openRouterService.model, raw_json: parsedResult, usage: aiResponse.usage, success: true }, 'field_locations', field_id || null);
@@ -1066,7 +1078,7 @@ router.post('/iot-sensor-summary',
   "confidence_score": number
 }`;
       const userPrompt = `Field: ${field_id || 'N/A'}\nReadings:\n${readingsText.slice(0, 6000)}`;
-      const aiResponse = await openRouterService.makeRequest(userPrompt, systemPrompt);
+      const aiResponse = await openRouterService.makeRequest(userPrompt + nativeFieldContext(req), systemPrompt);
       const content = aiResponse.choices?.[0]?.message?.content || '';
       const parsedResult = parseAIJson(content) || { summary: content };
       await logAIResult(req.user.id, 'iot_sensor_summary', { model: openRouterService.model, raw_json: parsedResult, usage: aiResponse.usage, success: true }, 'field_locations', field_id || null);

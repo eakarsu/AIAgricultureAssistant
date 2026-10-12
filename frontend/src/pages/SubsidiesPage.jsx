@@ -1,3 +1,5 @@
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,7 +16,7 @@ const CATEGORY_COLORS = {
 export default function SubsidiesPage() {
   const { api } = useAuth();
   const [form, setForm] = useState({ location: '', farm_type: FARM_TYPES[0], crops: '' });
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -25,11 +27,11 @@ export default function SubsidiesPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await api.post('/ai/find-subsidies', {
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/find-subsidies',{
         location: form.location,
         farm_type: form.farm_type,
         crops: form.crops.split(',').map(c => c.trim()).filter(Boolean)
-      });
+      },{signal}));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Search failed');
@@ -48,28 +50,30 @@ export default function SubsidiesPage() {
       </div>
 
       <form onSubmit={submit} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24 }}>
+<NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="form-group">
             <label>Location (state / county)</label>
-            <input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
+            <input data-ai-field={"location"} type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
               placeholder="e.g. Iowa, USA" required />
           </div>
           <div className="form-group">
             <label>Farm Type</label>
-            <select value={form.farm_type} onChange={e => setForm({ ...form, farm_type: e.target.value })}>
+            <select data-ai-field={"farm_type"} value={form.farm_type} onChange={e => setForm({ ...form, farm_type: e.target.value })}>
               {FARM_TYPES.map(f => <option key={f}>{f}</option>)}
             </select>
           </div>
         </div>
         <div className="form-group">
           <label>Crops Grown (comma-separated)</label>
-          <input type="text" value={form.crops} onChange={e => setForm({ ...form, crops: e.target.value })}
+          <input data-ai-field={"crops"} type="text" value={form.crops} onChange={e => setForm({ ...form, crops: e.target.value })}
             placeholder="e.g. Corn, Soybean, Wheat" required />
         </div>
         <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 12 }}>
-          {loading ? 'Searching...' : 'Find Programs'}
+          {loading ? 'Searching...' : 'Generate with OpenRouter'}
         </button>
-      </form>
+      </NativeAIControls>
+</form>
 
       {error && <div className="alert alert-error">{error}</div>}
 

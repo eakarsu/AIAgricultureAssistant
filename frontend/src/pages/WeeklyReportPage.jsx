@@ -1,3 +1,5 @@
+import useNativeAIRequest from '../components/useNativeAIRequest';
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,7 +8,7 @@ export default function WeeklyReportPage() {
   const { api } = useAuth();
   const navigate = useNavigate();
   const [week, setWeek] = useState(new Date().toISOString().split('T')[0]);
-  const [loading, setLoading] = useState(false);
+  const nativeAIRequest=useNativeAIRequest();const loading=nativeAIRequest.busy;const setLoading=()=>{};
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -16,7 +18,7 @@ export default function WeeklyReportPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await api.post('/ai/weekly-report', { week });
+      const res = await nativeAIRequest.run(signal=>api.post('/ai/weekly-report',{ week },{signal}));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to generate report');
@@ -52,14 +54,16 @@ export default function WeeklyReportPage() {
       </div>
 
       <form onSubmit={generate} style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24, display: 'flex', gap: 16, alignItems: 'flex-end' }}>
+<NativeAIControls busy={loading} onCancel={nativeAIRequest.cancel} context="AgricultureAssistant">
         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
           <label>Report Week</label>
-          <input type="date" value={week} onChange={e => setWeek(e.target.value)} />
+          <input data-ai-field={"week"} type="date" value={week} onChange={e => setWeek(e.target.value)} />
         </div>
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Generating Report...' : 'Generate Weekly Report'}
+          {loading ? 'Generating Report...' : 'Generate with OpenRouter'}
         </button>
-      </form>
+      </NativeAIControls>
+</form>
 
       {error && <div className="alert alert-error">{error}</div>}
 
