@@ -19,7 +19,7 @@ const app = require('../server');
 const pool = require('../config/database');
 
 // Helper to generate a valid JWT
-function generateToken(payload = { id: 1, email: 'test@test.com' }) {
+function generateToken(payload = { id: 1, email: 'test@test.com', role: 'user' }) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 }
 
@@ -140,7 +140,8 @@ describe('Auth Routes', () => {
     it('should return user data with valid token', async () => {
       const token = generateToken();
 
-      pool.query.mockResolvedValueOnce({
+            pool.query.mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@test.com', role: 'user' }] }); // auth middleware identity check
+pool.query.mockResolvedValueOnce({
         rows: [{
           id: 1, email: 'test@test.com', name: 'Test User',
           phone: null, farm_name: null, farm_size: null,
@@ -163,7 +164,8 @@ describe('Auth Routes', () => {
     it('should return profile for authenticated user', async () => {
       const token = generateToken();
 
-      pool.query.mockResolvedValueOnce({
+            pool.query.mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@test.com', role: 'user' }] }); // auth middleware identity check
+pool.query.mockResolvedValueOnce({
         rows: [{
           id: 1, email: 'test@test.com', name: 'Test User',
           phone: '555-1234', farm_name: 'Test Farm', farm_size: '100 acres',
@@ -186,7 +188,8 @@ describe('Auth Routes', () => {
     it('should update profile', async () => {
       const token = generateToken();
 
-      pool.query.mockResolvedValueOnce({
+            pool.query.mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@test.com', role: 'user' }] }); // auth middleware identity check
+pool.query.mockResolvedValueOnce({
         rows: [{
           id: 1, email: 'test@test.com', name: 'Updated Name',
           phone: '555-9999', farm_name: 'New Farm', farm_size: '200 acres',
@@ -290,6 +293,7 @@ describe('Auth Routes', () => {
   describe('POST /api/auth/refresh-token', () => {
     it('should return new token for authenticated user', async () => {
       const token = generateToken();
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@test.com', role: 'user' }] }); // auth middleware identity check
 
       const res = await request(app)
         .post('/api/auth/refresh-token')
@@ -310,7 +314,7 @@ describe('Auth Routes', () => {
 describe('API Endpoints', () => {
   describe('GET /api/health', () => {
     it('should return health status', async () => {
-      pool.query.mockResolvedValueOnce({ rows: [{ '?column?': 1 }] });
+pool.query.mockResolvedValueOnce({ rows: [{ '?column?': 1 }] });
 
       const res = await request(app).get('/api/health');
 
@@ -355,7 +359,7 @@ describe('Auth Middleware', () => {
   it('should reject requests without authorization header', async () => {
     const res = await request(app).get('/api/auth/me');
     expect(res.statusCode).toBe(401);
-    expect(res.body.error).toContain('No authorization header');
+    expect(res.body.error).toContain('Authentication required');
   });
 
   it('should reject requests with invalid token', async () => {

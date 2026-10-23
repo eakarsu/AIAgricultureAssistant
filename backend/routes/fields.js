@@ -20,17 +20,21 @@ router.get('/', authMiddleware, async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const offset = (page - 1) * limit;
 
+    const statusFilter = typeof req.query.status === 'string' && req.query.status ? req.query.status : 'active';
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : (typeof req.query.search === 'string' ? req.query.search.trim() : '');
+    const where = `user_id = $1 AND status = $2${q ? ' AND (name ILIKE $3 OR crop_type ILIKE $3 OR soil_type ILIKE $3 OR description ILIKE $3)' : ''}`;
+    const baseParams = q ? [req.user.id, statusFilter, `%${q}%`] : [req.user.id, statusFilter];
     const countResult = await pool.query(
-      `SELECT COUNT(*)::int AS total FROM field_locations WHERE user_id = $1 AND status = 'active'`,
-      [req.user.id]
+      `SELECT COUNT(*)::int AS total FROM field_locations WHERE ${where}`,
+      baseParams
     );
     const total = countResult.rows[0].total;
 
     const result = await pool.query(
-      `SELECT * FROM field_locations WHERE user_id = $1 AND status = 'active'
+      `SELECT * FROM field_locations WHERE ${where}
        ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [req.user.id, limit, offset]
+       LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
+      [...baseParams, limit, offset]
     );
     res.json({
       records: result.rows,

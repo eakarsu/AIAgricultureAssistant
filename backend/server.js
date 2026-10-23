@@ -119,6 +119,7 @@ app.use('/api/uploads', uploadsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/fields', fieldsRoutes);
+app.use('/api/feature-pack', require('./routes/featurePack'));
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ai', aiRoutesNew);
 app.use('/api/operations', require('./routes/operationsWorkflow'));

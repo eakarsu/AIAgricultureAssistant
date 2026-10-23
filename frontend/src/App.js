@@ -44,6 +44,7 @@ import SustainabilityScorePage from './pages/SustainabilityScorePage';
 import IrrigationOptimizeTextPage from './pages/IrrigationOptimizeTextPage';
 import IotSensorSummaryPage from './pages/IotSensorSummaryPage';
 import CustomViewsPage from './pages/CustomViewsPage';
+import FeaturePackPage from './pages/FeaturePackPage';
 import GapAiIrrigationOptimizationRealTime from './pages/GapAiIrrigationOptimizationRealTime';
 
 import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
@@ -98,6 +99,7 @@ function AppContent() {
                   <Route path="/fields" element={<FieldMapPage />} />
                   <Route path="/uploads" element={<FileUploadsPage />} />
                   <Route path="/export" element={<ExportPage />} />
+        <Route path="/feature-pack" element={<FeaturePackPage />} />
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="/feedback" element={<FeedbackPage />} />
                   <Route path="/privacy" element={<PrivacyPolicyPage />} />
